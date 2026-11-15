@@ -95,35 +95,41 @@ export const BlockchainVerifyView: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Top Banner / EVM Node Telemetry */}
-      <div className="bg-[#174B36] rounded-2xl p-6 text-white shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="text-xs font-mono font-bold text-[#F3E8B2] uppercase tracking-wider">
-              Smart Contract: UrbanTreeRegistry.sol
-            </span>
+      {/* Top Banner / EVM Node Telemetry: Hiệu ứng loang màu nhẹ nhàng (ambient mesh gradient) */}
+      <div className="relative overflow-hidden bg-gradient-to-r from-[#103626] via-[#174B36] to-[#205a3d] rounded-2xl p-6 text-white shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-5">
+        {/* Lớp màu loang nhẹ nhàng (ambient mesh blur) */}
+        <div className="pointer-events-none absolute -top-12 -left-12 w-64 h-64 rounded-full bg-emerald-400/20 blur-3xl"></div>
+        <div className="pointer-events-none absolute top-1/2 left-1/3 -translate-y-1/2 w-72 h-36 rounded-full bg-teal-300/12 blur-2xl"></div>
+        <div className="pointer-events-none absolute -bottom-10 right-32 w-64 h-64 rounded-full bg-emerald-300/15 blur-3xl"></div>
+        <div className="pointer-events-none absolute -top-8 right-6 w-52 h-52 rounded-full bg-lime-300/15 blur-2xl"></div>
+
+        {/* Nội dung thông tin bên trái */}
+        <div className="relative z-10 space-y-1.5">
+          <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-white/10 text-xs font-mono font-bold text-[#F3E8B2] uppercase tracking-wider backdrop-blur-xs border border-white/10">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span>Smart Contract: UrbanTreeRegistry.sol</span>
           </div>
-          <h1 className="text-xl font-bold">Sổ cái Hoạt động & Xác minh Tính toàn vẹn Blockchain</h1>
-          <p className="text-xs text-white/80 max-w-xl">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Sổ cái Hoạt động & Xác minh Tính toàn vẹn Blockchain</h1>
+          <p className="text-xs sm:text-sm text-white/80 max-w-xl leading-relaxed">
             Màn hình A18/A19: Đối chiếu chuỗi băm Canonical SHA-256 hiện tại với chữ ký điện tử đã neo trên mạng EVM để chứng minh tính bất biến.
           </p>
         </div>
 
         {/* Node Status Card & Offline Toggle */}
-        <div className="bg-white/10 backdrop-blur-xs p-3.5 rounded-xl border border-white/20 text-xs space-y-2 shrink-0">
+        <div className="relative z-10 bg-white/10 backdrop-blur-md p-4 rounded-xl border border-white/20 text-xs space-y-2.5 shrink-0 shadow-sm min-w-[260px]">
           <div className="flex items-center justify-between gap-3">
-            <span className="text-white/80">Trạng thái Node EVM:</span>
+            <span className="text-white/80 font-medium">Trạng thái Node EVM:</span>
             <span
-              className={`font-mono font-bold px-2 py-0.5 rounded text-[10px] ${
+              className={`font-mono font-bold px-2.5 py-0.5 rounded-full text-[10px] shadow-xs flex items-center gap-1.5 ${
                 nodeOnline ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'
               }`}
             >
-              {nodeOnline ? 'ONLINE (127.0.0.1:8545)' : 'OFFLINE'}
+              <span className={`w-1.5 h-1.5 rounded-full ${nodeOnline ? 'bg-white animate-pulse' : 'bg-white'}`} />
+              <span>{nodeOnline ? 'ONLINE (127.0.0.1:8545)' : 'OFFLINE'}</span>
             </span>
           </div>
 
-          <div className="font-mono text-[11px] text-white/90 space-y-0.5">
+          <div className="font-mono text-[11px] text-white/90 space-y-1">
             <div>Chain ID: <strong>{nodeStatus.chainId} (Local Hardhat)</strong></div>
             <div className="truncate max-w-[220px]">Contract: {nodeStatus.contractAddress}</div>
             <div>Block mới nhất: <strong>#{nodeStatus.blockNumber}</strong></div>
@@ -131,7 +137,7 @@ export const BlockchainVerifyView: React.FC = () => {
 
           <button
             onClick={handleToggleNode}
-            className="w-full py-1 bg-white/20 hover:bg-white/30 text-white font-semibold rounded text-[11px] transition-colors"
+            className="w-full py-1.5 bg-white/15 hover:bg-white/25 active:scale-95 text-white font-semibold rounded-lg text-[11px] transition-all border border-white/15 cursor-pointer"
           >
             {nodeOnline ? 'Mô phỏng ngắt kết nối Node' : 'Bật lại kết nối Node'}
           </button>

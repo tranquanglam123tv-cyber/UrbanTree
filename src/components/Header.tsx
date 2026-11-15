@@ -1,15 +1,10 @@
 import React from 'react';
 import {
   Trees,
-  LayoutDashboard,
-  MapPin,
-  ClipboardList,
-  AlertTriangle,
-  ShieldCheck,
   QrCode,
   RotateCcw,
-  UserCheck,
   ChevronDown,
+  Check
 } from 'lucide-react';
 import { Role, User } from '../types';
 import { storage } from '../db/storage';
@@ -51,244 +46,134 @@ export const Header: React.FC<HeaderProps> = ({
     }
   };
 
+  const userInitial = currentUser.fullName ? currentUser.fullName.trim().charAt(0).toUpperCase() : 'U';
+
+  const navItems = [
+    ...(currentUser.role !== 'CITIZEN'
+      ? [
+        { id: 'dashboard', label: 'Tổng quan' },
+        { id: 'trees', label: 'Hồ sơ cây' },
+        { id: 'map', label: 'Bản đồ số' },
+        { id: 'care', label: 'Nhật ký chăm sóc' },
+      ]
+      : []),
+    { id: 'incidents', label: 'Sự cố & Phản ánh' },
+    ...(currentUser.role === 'ADMIN'
+      ? [{ id: 'blockchain', label: 'Blockchain EVM' }]
+      : []),
+  ];
+
   return (
-    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-[#E0EBDD] transition-colors">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16 gap-4">
-          {/* Brand */}
-          <div className="flex items-center gap-3 shrink-0">
+    <header className="sticky top-0 z-40 bg-white border-b border-gray-200">
+      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-[68px]">
+
+          {/* Cụm Trái: Brand / Logo */}
+          <div className="flex items-center shrink-0 pr-8 border-r border-gray-200 h-10">
             <button
               onClick={() => setActiveTab(currentUser.role === 'CITIZEN' ? 'incidents' : 'dashboard')}
-              className="flex items-center gap-2.5 text-left group focus:outline-none"
+              className="flex items-center focus:outline-none cursor-pointer group"
+              title="UrbanTree - Về trang chủ"
             >
-              <div className="w-10 h-10 rounded-xl bg-[#174B36] flex items-center justify-center text-[#F3E8B2] shadow-sm transition-transform group-hover:scale-105">
-                <Trees className="w-6 h-6" />
-              </div>
-              <div>
-                <span className="text-lg font-bold tracking-tight text-[#174B36] flex items-center gap-1.5">
-                  UrbanTree
-                </span>
-                <span className="hidden sm:block text-[11px] text-[#4C956C] font-medium leading-none">
-                  Quản lý Cây xanh & Blockchain
-                </span>
-              </div>
+              <img
+                src="/LOGO.png"
+                alt="UrbanTree Logo"
+                className="h-[52px] w-auto max-w-[180px] object-contain transition-transform group-hover:scale-105 drop-shadow-xs"
+              />
             </button>
           </div>
 
-          {/* Navigation Links */}
-          <nav className="hidden lg:flex items-center gap-1.5 shrink-0">
-            {currentUser.role !== 'CITIZEN' && (
-              <>
+          {/* Cụm Giữa: Menu Điều hướng (In hoa, In đậm, Không xuống dòng) */}
+          <nav className="hidden lg:flex items-center h-[68px] flex-1 px-8 gap-7 overflow-x-auto scrollbar-none">
+            {navItems.map((item) => {
+              const isActive = activeTab === item.id;
+              return (
                 <button
-                  onClick={() => setActiveTab('dashboard')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all active:scale-95 whitespace-nowrap ${
-                    activeTab === 'dashboard'
-                      ? 'bg-[#174B36] text-white shadow-xs'
-                      : 'text-[#1E2922]/70 hover:text-[#174B36] hover:bg-[#E0EBDD]/60'
-                  }`}
+                  key={item.id}
+                  onClick={() => setActiveTab(item.id)}
+                  className={`h-full inline-flex items-center text-[13px] uppercase font-bold whitespace-nowrap transition-colors border-b-[3px] cursor-pointer ${isActive
+                    ? 'border-[#174B36] text-[#174B36]'
+                    : 'border-transparent text-gray-500 hover:text-gray-900'
+                    }`}
                 >
-                  <LayoutDashboard className="w-4 h-4" />
-                  <span>Tổng quan</span>
+                  {item.label}
                 </button>
-
-                <button
-                  onClick={() => setActiveTab('trees')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all active:scale-95 whitespace-nowrap ${
-                    activeTab === 'trees'
-                      ? 'bg-[#174B36] text-white shadow-xs'
-                      : 'text-[#1E2922]/70 hover:text-[#174B36] hover:bg-[#E0EBDD]/60'
-                  }`}
-                >
-                  <Trees className="w-4 h-4" />
-                  <span>Hồ sơ cây</span>
-                </button>
-
-                <button
-                  onClick={() => setActiveTab('map')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all active:scale-95 whitespace-nowrap ${
-                    activeTab === 'map'
-                      ? 'bg-[#174B36] text-white shadow-xs'
-                      : 'text-[#1E2922]/70 hover:text-[#174B36] hover:bg-[#E0EBDD]/60'
-                  }`}
-                >
-                  <MapPin className="w-4 h-4" />
-                  <span>Bản đồ số</span>
-                </button>
-
-                <button
-                  onClick={() => setActiveTab('care')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all active:scale-95 whitespace-nowrap ${
-                    activeTab === 'care'
-                      ? 'bg-[#174B36] text-white shadow-xs'
-                      : 'text-[#1E2922]/70 hover:text-[#174B36] hover:bg-[#E0EBDD]/60'
-                  }`}
-                >
-                  <ClipboardList className="w-4 h-4" />
-                  <span>Nhật ký chăm sóc</span>
-                </button>
-              </>
-            )}
-
-            <button
-              onClick={() => setActiveTab('incidents')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all active:scale-95 whitespace-nowrap ${
-                activeTab === 'incidents'
-                  ? 'bg-[#174B36] text-white shadow-xs'
-                  : 'text-[#1E2922]/70 hover:text-[#174B36] hover:bg-[#E0EBDD]/60'
-              }`}
-            >
-              <AlertTriangle className="w-4 h-4" />
-              <span>Sự cố & Phản ánh</span>
-            </button>
-
-            {currentUser.role === 'ADMIN' && (
-              <button
-                onClick={() => setActiveTab('blockchain')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all active:scale-95 whitespace-nowrap ${
-                  activeTab === 'blockchain'
-                    ? 'bg-[#174B36] text-white shadow-xs'
-                    : 'text-[#1E2922]/70 hover:text-[#174B36] hover:bg-[#E0EBDD]/60'
-                }`}
-              >
-                <ShieldCheck className="w-4 h-4 text-emerald-500 animate-pulse" />
-                <span>Blockchain A19</span>
-              </button>
-            )}
+              );
+            })}
           </nav>
 
-          {/* Action Zone: QR Scanner, Persona Switcher, Reset */}
-          <div className="flex items-center gap-2.5 shrink-0">
-            {/* Quick QR Scanner button */}
+          {/* Cụm Phải: Các nút hành động & Người dùng */}
+          <div className="flex items-center gap-4 shrink-0 pl-4">
+
             <button
               onClick={onOpenQrScanner}
-              title="Quét hoặc tra cứu mã QR cây"
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-[#E0EBDD] text-[#174B36] hover:bg-[#d0dfcc] text-xs font-semibold rounded-lg transition-colors shadow-2xs whitespace-nowrap"
+              className="inline-flex items-center gap-2 px-3 py-1.5 border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 text-sm font-semibold rounded-md transition-colors cursor-pointer whitespace-nowrap"
             >
-              <QrCode className="w-4 h-4" />
+              <QrCode className="w-4 h-4 text-gray-500" />
               <span className="hidden sm:inline">Quét QR</span>
             </button>
 
-            {/* Persona Switcher Dropdown */}
+            {/* Vách ngăn mỏng */}
+            <div className="w-px h-8 bg-gray-200 hidden sm:block"></div>
+
+            {/* User Profile Dropdown */}
             <div className="relative group">
-              <button className="flex items-center gap-2 pl-2.5 pr-2 py-1.5 bg-[#F6F5EC] border border-[#E0EBDD] rounded-lg text-xs font-medium text-[#174B36] hover:border-[#347A50] transition-colors">
-                <UserCheck className="w-3.5 h-3.5 text-[#347A50]" />
-                <span className="max-w-[120px] truncate">{currentUser.fullName}</span>
-                <span className="px-1.5 py-0.5 text-[10px] font-bold rounded bg-[#174B36] text-[#F3E8B2]">
-                  {currentUser.role}
-                </span>
-                <ChevronDown className="w-3 h-3 text-[#174B36]/60" />
+              <button className="flex items-center gap-2.5 py-1 rounded-md cursor-pointer text-left focus:outline-none">
+                <div className="w-8 h-8 rounded-full bg-gray-100 border border-gray-200 text-gray-700 font-bold text-sm flex items-center justify-center shrink-0">
+                  {userInitial}
+                </div>
+                <div className="hidden sm:flex flex-col">
+                  <span className="text-sm font-semibold text-gray-900 leading-tight">
+                    {currentUser.fullName}
+                  </span>
+                  <span className="text-[11px] uppercase text-gray-500 font-medium leading-tight mt-0.5">
+                    {currentUser.role === 'CITIZEN' ? 'Người dân' : currentUser.role}
+                  </span>
+                </div>
+                <ChevronDown className="w-4 h-4 text-gray-400 group-hover:text-gray-600 ml-1" />
               </button>
 
-              <div className="absolute right-0 mt-1 w-56 bg-white border border-[#E0EBDD] rounded-xl shadow-lg p-1.5 hidden group-hover:block group-focus-within:block z-50">
-                <div className="px-2 py-1.5 text-[11px] font-semibold text-[#1E2922]/60 uppercase tracking-wider">
-                  Chuyển vai trò thử nghiệm
+              {/* Menu Dropdown */}
+              <div className="absolute right-0 mt-2 w-64 bg-white border border-gray-200 rounded-lg shadow-sm py-1.5 hidden group-hover:block group-focus-within:block z-50">
+                <div className="px-4 py-2 border-b border-gray-100 mb-1">
+                  <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+                    Đổi vai trò hệ thống
+                  </p>
                 </div>
-                <button
-                  onClick={() => handleRoleSelect('ADMIN')}
-                  className={`w-full text-left px-2.5 py-1.5 text-xs rounded-lg flex items-center justify-between ${
-                    currentUser.role === 'ADMIN' ? 'bg-[#E0EBDD] text-[#174B36] font-semibold' : 'text-[#1E2922] hover:bg-slate-50'
-                  }`}
-                >
-                  <div>
-                    <div>Đặng Thế Thuận</div>
-                    <div className="text-[10px] text-slate-500">Quản trị viên (Admin)</div>
-                  </div>
-                  <span className="text-[10px] px-1.5 py-0.5 bg-[#174B36] text-white rounded">ADMIN</span>
-                </button>
-                <button
-                  onClick={() => handleRoleSelect('STAFF')}
-                  className={`w-full text-left px-2.5 py-1.5 text-xs rounded-lg flex items-center justify-between ${
-                    currentUser.role === 'STAFF' ? 'bg-[#E0EBDD] text-[#174B36] font-semibold' : 'text-[#1E2922] hover:bg-slate-50'
-                  }`}
-                >
-                  <div>
-                    <div>Trần Quang Lâm</div>
-                    <div className="text-[10px] text-slate-500">Kỹ thuật viên (Staff)</div>
-                  </div>
-                  <span className="text-[10px] px-1.5 py-0.5 bg-[#347A50] text-white rounded">STAFF</span>
-                </button>
-                <button
-                  onClick={() => handleRoleSelect('CITIZEN')}
-                  className={`w-full text-left px-2.5 py-1.5 text-xs rounded-lg flex items-center justify-between ${
-                    currentUser.role === 'CITIZEN' ? 'bg-[#E0EBDD] text-[#174B36] font-semibold' : 'text-[#1E2922] hover:bg-slate-50'
-                  }`}
-                >
-                  <div>
-                    <div>Người dân</div>
-                    <div className="text-[10px] text-slate-500">Công cộng / Tra cứu / Phản ánh</div>
-                  </div>
-                  <span className="text-[10px] px-1.5 py-0.5 bg-[#4C956C] text-white rounded">PUBLIC</span>
-                </button>
+
+                {[
+                  { role: 'ADMIN', name: 'Đặng Thế Thuận', desc: 'Quản trị viên' },
+                  { role: 'STAFF', name: 'Trần Quang Lâm', desc: 'Kỹ thuật viên' },
+                  { role: 'CITIZEN', name: 'Tài khoản công cộng', desc: 'Người dân' }
+                ].map((persona) => (
+                  <button
+                    key={persona.role}
+                    onClick={() => handleRoleSelect(persona.role as Role)}
+                    className="w-full text-left px-4 py-2.5 text-sm flex items-center justify-between hover:bg-gray-50 transition-colors"
+                  >
+                    <div>
+                      <div className={`font-semibold ${currentUser.role === persona.role ? 'text-[#174B36]' : 'text-gray-900'}`}>
+                        {persona.name}
+                      </div>
+                      <div className="text-[11px] text-gray-500 uppercase mt-0.5">{persona.desc}</div>
+                    </div>
+                    {currentUser.role === persona.role && (
+                      <Check className="w-4 h-4 text-[#174B36]" />
+                    )}
+                  </button>
+                ))}
               </div>
             </div>
 
-            {/* Reset Seed button */}
+            {/* Nút Reset */}
             <button
               onClick={onResetSeed}
-              title="Khôi phục dữ liệu mẫu ban đầu"
-              className="p-1.5 text-slate-400 hover:text-[#174B36] hover:bg-slate-100 rounded-lg transition-colors"
+              title="Khôi phục dữ liệu gốc"
+              className="p-1.5 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors cursor-pointer ml-1"
             >
               <RotateCcw className="w-4 h-4" />
             </button>
           </div>
-        </div>
-
-        {/* Mobile & Tablet secondary navigation */}
-        <div className="lg:hidden flex items-center gap-1 overflow-x-auto py-2 border-t border-[#E0EBDD]/60">
-          {currentUser.role !== 'CITIZEN' && (
-            <>
-              <button
-                onClick={() => setActiveTab('dashboard')}
-                className={`px-2.5 py-1 rounded-md text-xs font-medium whitespace-nowrap ${
-                  activeTab === 'dashboard' ? 'bg-[#174B36] text-white' : 'text-slate-600'
-                }`}
-              >
-                Tổng quan
-              </button>
-              <button
-                onClick={() => setActiveTab('trees')}
-                className={`px-2.5 py-1 rounded-md text-xs font-medium whitespace-nowrap ${
-                  activeTab === 'trees' ? 'bg-[#174B36] text-white' : 'text-slate-600'
-                }`}
-              >
-                Cây xanh
-              </button>
-              <button
-                onClick={() => setActiveTab('map')}
-                className={`px-2.5 py-1 rounded-md text-xs font-medium whitespace-nowrap ${
-                  activeTab === 'map' ? 'bg-[#174B36] text-white' : 'text-slate-600'
-                }`}
-              >
-                Bản đồ
-              </button>
-              <button
-                onClick={() => setActiveTab('care')}
-                className={`px-2.5 py-1 rounded-md text-xs font-medium whitespace-nowrap ${
-                  activeTab === 'care' ? 'bg-[#174B36] text-white' : 'text-slate-600'
-                }`}
-              >
-                Chăm sóc
-              </button>
-            </>
-          )}
-          <button
-            onClick={() => setActiveTab('incidents')}
-            className={`px-2.5 py-1 rounded-md text-xs font-medium whitespace-nowrap ${
-              activeTab === 'incidents' ? 'bg-[#174B36] text-white' : 'text-slate-600'
-            }`}
-          >
-            Sự cố
-          </button>
-          {currentUser.role === 'ADMIN' && (
-            <button
-              onClick={() => setActiveTab('blockchain')}
-              className={`px-2.5 py-1 rounded-md text-xs font-medium whitespace-nowrap ${
-                activeTab === 'blockchain' ? 'bg-[#174B36] text-white' : 'text-slate-600'
-              }`}
-            >
-              Blockchain
-            </button>
-          )}
         </div>
       </div>
     </header>
