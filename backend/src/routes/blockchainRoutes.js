@@ -151,6 +151,7 @@ router.get('/verify/:recordId', async (req, res) => {
 
         res.json({
             success: true,
+            record: result,
             recordId: result.recordId,
             isValid: result.isValid,
             isExisted: result.isExisted,

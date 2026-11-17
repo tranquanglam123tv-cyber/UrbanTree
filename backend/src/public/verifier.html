@@ -119,12 +119,26 @@
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                    <label class="block text-xs font-bold text-gray-700 mb-1.5">Mã bản ghi (Record ID):</label>
-                    <div class="relative">
-                        <i class="fa-solid fa-barcode absolute left-3 top-3 text-gray-400 text-xs"></i>
-                        <input type="text" id="verify-record-id" value="TREE-001" placeholder="VD: TREE-001 hoặc INC-1"
-                            class="w-full pl-8 pr-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-mono font-bold focus:bg-white focus:ring-2 focus:ring-leaf focus:border-leaf transition">
+                    <div class="flex justify-between items-center mb-1.5">
+                        <label class="block text-xs font-bold text-gray-700">Mã bản ghi (Record ID):</label>
+                        <span class="text-[10px] text-leaf font-bold flex items-center">
+                            <i class="fa-solid fa-list-check mr-1"></i>Chọn nhanh
+                        </span>
                     </div>
+                    <div class="relative">
+                        <i class="fa-solid fa-barcode absolute left-3 top-3 text-leaf text-xs pointer-events-none z-10"></i>
+                        <select id="verify-record-select" onchange="onSelectRecord(this.value)"
+                            class="w-full pl-8 pr-8 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-mono font-bold focus:bg-white focus:ring-2 focus:ring-leaf focus:border-leaf transition appearance-none cursor-pointer shadow-sm">
+                            <option value="TREE-001">TREE-001 — Cây Bàng Đài Loan</option>
+                            <option value="TREE-002">TREE-002 — Cây Giáng Hương</option>
+                            <option value="TREE-9081">TREE-9081 — Cây Sao Đen</option>
+                            <option value="CARE-9469">CARE-9469 — Nhật ký chăm sóc</option>
+                            <option value="__custom__">✍️ Tự nhập mã khác...</option>
+                        </select>
+                        <i class="fa-solid fa-chevron-down absolute right-3 top-3.5 text-gray-400 text-[10px] pointer-events-none"></i>
+                    </div>
+                    <input type="text" id="verify-record-id" value="TREE-001" placeholder="Nhập mã bản ghi (VD: TREE-999)..."
+                        class="hidden mt-2 w-full px-3 py-2 bg-white border border-gray-300 rounded-xl text-xs font-mono font-bold focus:ring-2 focus:ring-leaf focus:border-leaf">
                 </div>
 
                 <div>
@@ -287,7 +301,24 @@
                     return;
                 }
 
-                const rec = data.record;
+                const rec = data.record || data;
+
+                if (!rec.isExisted) {
+                    resultBox.innerHTML = `
+                        <div class="p-5 rounded-2xl border border-amber-300 bg-gradient-to-br from-amber-50 via-white to-yellow-50 shadow-sm text-xs">
+                            <div class="flex items-center space-x-2 mb-2 font-bold text-amber-900 text-sm">
+                                <i class="fa-solid fa-circle-exclamation text-amber-600 text-lg"></i>
+                                <span>BẢN GHI CHƯA ĐƯỢC NEO LÊN BLOCKCHAIN (NOT FOUND ON-CHAIN)</span>
+                            </div>
+                            <p class="text-gray-600 mb-3">Mã bản ghi <b class="font-mono text-gray-900">${recordId}</b> chưa tồn tại trên Smart Contract. Bản ghi này cần được nhân viên nghiệm thu hoặc bấm neo dữ liệu trước khi kiểm toán.</p>
+                            <div class="bg-amber-100/70 p-3 rounded-xl border border-amber-200 font-mono text-[11px] text-amber-900 flex justify-between items-center">
+                                <span>Gợi ý: Mở tab Admin hoặc chạy script mẫu để neo hồ sơ cây này.</span>
+                            </div>
+                        </div>
+                    `;
+                    return;
+                }
+
                 const isMatch = rec.isValid;
 
                 resultBox.innerHTML = `
@@ -341,6 +372,27 @@
             }
         }
 
+        let explorerRecordsMap = {};
+
+        function onSelectRecord(val) {
+            const inputCustom = document.getElementById('verify-record-id');
+            const hashInput = document.getElementById('verify-current-hash');
+            
+            if (val === '__custom__') {
+                inputCustom.classList.remove('hidden');
+                inputCustom.value = '';
+                inputCustom.focus();
+                hashInput.value = '';
+            } else if (val) {
+                inputCustom.classList.add('hidden');
+                inputCustom.value = val;
+                const rec = explorerRecordsMap[val];
+                if (rec && rec.dataHash) {
+                    hashInput.value = rec.dataHash;
+                }
+            }
+        }
+
         async function loadExplorerData() {
             const tbody = document.getElementById('explorer-tbody');
             tbody.innerHTML = '<tr><td colspan="6" class="p-6 text-center text-gray-400"><i class="fa-solid fa-spinner fa-spin mr-2 text-leaf text-base"></i> Đang truy vấn sổ cái...</td></tr>';
@@ -352,6 +404,29 @@
                 if (!data.success || !data.records || data.records.length === 0) {
                     tbody.innerHTML = '<tr><td colspan="6" class="p-6 text-center text-gray-400">Chưa có bản ghi nào được neo trên Blockchain local.</td></tr>';
                     return;
+                }
+
+                // Cập nhật bộ nhớ cache map để tra cứu nhanh khi chọn dropdown
+                explorerRecordsMap = {};
+                data.records.forEach(r => {
+                    explorerRecordsMap[r.recordId] = r;
+                });
+
+                // Tự động đổ dữ liệu vào Menu Xổ Xuống (Dropdown Select)
+                const selectBox = document.getElementById('verify-record-select');
+                if (selectBox) {
+                    selectBox.innerHTML = `
+                        <option value="">-- Bấm vào đây để chọn Mã Bản Ghi --</option>
+                        ${data.records.map(r => `<option value="${r.recordId}">[${r.recordType}] ${r.recordId}</option>`).join('')}
+                        <option value="__custom__">✍️ Tự nhập mã khác...</option>
+                    `;
+                    // Mặc định chọn ngay bản ghi đầu tiên và điền sẵn mã băm
+                    if (data.records.length > 0) {
+                        const firstRec = data.records[0];
+                        selectBox.value = firstRec.recordId;
+                        document.getElementById('verify-record-id').value = firstRec.recordId;
+                        document.getElementById('verify-current-hash').value = firstRec.dataHash;
+                    }
                 }
 
                 tbody.innerHTML = data.records.map(r => `
@@ -374,6 +449,9 @@
         }
 
         function checkThisRecord(id, hash) {
+            const selectBox = document.getElementById('verify-record-select');
+            if (selectBox) selectBox.value = id;
+            document.getElementById('verify-record-id').classList.add('hidden');
             document.getElementById('verify-record-id').value = id;
             document.getElementById('verify-current-hash').value = hash;
             window.scrollTo({ top: 0, behavior: 'smooth' });
