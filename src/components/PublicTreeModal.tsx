@@ -26,6 +26,11 @@ export const PublicTreeModal: React.FC<PublicTreeModalProps> = ({
   if (!tree) return null;
 
   const treeType = storage.getTreeTypeById(tree.treeTypeId);
+  const treeIncidents = storage
+    .getIncidents()
+    .filter((i) => i.treeId === tree.id)
+    .slice(0, 5);
+  const treeCares = storage.getCareRecords(tree.id).slice(0, 3);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
@@ -114,6 +119,80 @@ export const PublicTreeModal: React.FC<PublicTreeModalProps> = ({
             </div>
           )}
 
+          {/* Incident Reports & Care History for this tree (no code needed!) */}
+          <div className="space-y-2">
+            <span className="font-bold text-[#174B36] text-xs">
+              Phản ánh sự cố & Tiến độ xử lý của cây này ({treeIncidents.length}):
+            </span>
+            {treeIncidents.length === 0 ? (
+              <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-100 text-[11px] text-slate-500">
+                Hiện chưa có phản ánh sự cố nào cho cây này.
+              </div>
+            ) : (
+              <div className="space-y-1.5">
+                {treeIncidents.map((inc) => (
+                  <div
+                    key={inc.id}
+                    className="p-2.5 bg-slate-50 rounded-xl border border-slate-200/70 flex items-start justify-between gap-2"
+                  >
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="font-mono font-bold text-[#174B36]">{inc.publicCode}</span>
+                        <span className="text-[10px] text-slate-400">
+                          · {new Date(inc.reportedAt).toLocaleDateString('vi-VN')}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-700 mt-0.5 line-clamp-2">{inc.description}</p>
+                      {Number(inc.serviceCost || 0) > 0 && (
+                        <div className="text-[10px] font-mono text-emerald-700 font-bold mt-0.5">
+                          Chi phí xử lý: {Number(inc.serviceCost).toLocaleString('vi-VN')} VNĐ
+                        </div>
+                      )}
+                    </div>
+                    <span
+                      className={`shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                        inc.status === 'RESOLVED'
+                          ? 'bg-emerald-100 text-emerald-800'
+                          : inc.status === 'IN_PROGRESS'
+                          ? 'bg-blue-100 text-blue-800'
+                          : 'bg-amber-100 text-amber-800'
+                      }`}
+                    >
+                      {inc.status}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {treeCares.length > 0 && (
+            <div className="space-y-1.5">
+              <span className="font-bold text-[#174B36] text-xs">
+                Nhật ký chăm sóc / cắt tỉa gần đây:
+              </span>
+              <div className="space-y-1.5">
+                {treeCares.map((c) => (
+                  <div
+                    key={c.id}
+                    className="p-2.5 bg-emerald-50/40 rounded-xl border border-emerald-100 flex items-center justify-between gap-2 text-[11px]"
+                  >
+                    <div className="min-w-0">
+                      <span className="font-bold text-[#174B36]">{c.actionType}</span>
+                      <span className="text-slate-500 ml-1.5">
+                        · {new Date(c.performedAt).toLocaleDateString('vi-VN')}
+                      </span>
+                      <div className="text-slate-600 truncate">{c.notes}</div>
+                    </div>
+                    <span className="shrink-0 font-mono font-bold text-emerald-800">
+                      {Number(c.serviceCost || 0).toLocaleString('vi-VN')} VNĐ
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Blockchain Integrity Seal */}
           <div className="p-3 bg-emerald-50/70 border border-emerald-200 rounded-xl flex items-center justify-between gap-3 text-emerald-900">
             <div className="flex items-center gap-2">
@@ -121,12 +200,12 @@ export const PublicTreeModal: React.FC<PublicTreeModalProps> = ({
               <div>
                 <div className="font-bold text-[11px]">Bảo chứng Toàn vẹn Blockchain</div>
                 <div className="text-[10px] text-emerald-700 font-mono truncate max-w-[220px]">
-                  Hash: {tree.payloadHash?.slice(0, 24)}...
+                  Hash: {tree.payloadHash ? `${tree.payloadHash.slice(0, 24)}...` : 'Chưa neo'}
                 </div>
               </div>
             </div>
             <span className="px-2 py-0.5 rounded bg-emerald-200/60 text-emerald-800 font-bold text-[10px] font-mono">
-              VERIFIED
+              {tree.anchorStatus || 'VERIFIED'}
             </span>
           </div>
         </div>
