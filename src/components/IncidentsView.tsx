@@ -51,6 +51,7 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
   const [newStatus, setNewStatus] = useState<IncidentStatus>('ASSIGNED');
   const [assignStaffId, setAssignStaffId] = useState<string>('');
   const [transitionNote, setTransitionNote] = useState('');
+  const [serviceCost, setServiceCost] = useState<string>('2500000');
   const [isUpdating, setIsUpdating] = useState(false);
 
   // Citizen submission form state
@@ -94,6 +95,12 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
         actorName: `${currentUser.fullName} (${currentUser.role})`,
         note: transitionNote.trim(),
         assignedToUserId: assignStaffId || undefined,
+        ...(newStatus === 'RESOLVED'
+          ? {
+              serviceCost: Number(serviceCost || 0),
+              resolutionNotes: transitionNote.trim(),
+            }
+          : {}),
       });
 
       setSelectedIncident(updated);
@@ -334,6 +341,15 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
                       <span className="text-slate-400 block text-[10px]">Địa chỉ:</span>
                       <span>{selectedIncident.address}</span>
                     </div>
+
+                    {Number(selectedIncident.serviceCost || 0) > 0 && (
+                      <div>
+                        <span className="text-slate-400 block text-[10px]">Chi phí xử lý đã nghiệm thu:</span>
+                        <span className="font-mono font-bold text-emerald-700">
+                          {Number(selectedIncident.serviceCost).toLocaleString('vi-VN')} VNĐ
+                        </span>
+                      </div>
+                    )}
                   </div>
 
                   {/* Status Transition Form */}
@@ -375,6 +391,22 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
                         ))}
                       </select>
                     </div>
+
+                    {newStatus === 'RESOLVED' && (
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                          Chi phí dịch vụ xử lý / cắt tỉa (VNĐ - sẽ niêm phong Sepolia):
+                        </label>
+                        <input
+                          type="number"
+                          min={0}
+                          step={10000}
+                          value={serviceCost}
+                          onChange={(e) => setServiceCost(e.target.value)}
+                          className="w-full px-2.5 py-1.5 border border-emerald-300 rounded-lg font-mono font-bold text-[#174B36] bg-emerald-50/40"
+                        />
+                      </div>
+                    )}
 
                     <div>
                       <label className="block text-[11px] font-semibold text-slate-600 mb-1">
