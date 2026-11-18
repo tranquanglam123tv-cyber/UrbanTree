@@ -1,7 +1,8 @@
 {
-  "network": "localhost",
-  "chainId": 31337,
-  "contractAddress": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
-  "deployer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-  "deployedAt": "2026-11-17T13:02:29.931Z"
+  "network": "sepolia",
+  "chainId": 11155111,
+  "contractAddress": "0x5E18EdFb8a30B647853dA6171B32Be9C5f98573C",
+  "deployer": "0xB4CC9A1403cc2FC40d590e87faE1Cb6D507C04d3",
+  "deployedVia": "Remix IDE",
+  "deployedAt": "2026-11-18T05:39:16.000Z"
 }

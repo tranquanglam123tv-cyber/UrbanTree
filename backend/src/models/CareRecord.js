@@ -88,6 +88,7 @@ const CareRecord = {
       staff_id,
       caretaker_name,
       action_type,
+      service_cost,
       health_before,
       health_after,
       notes,
@@ -100,11 +101,11 @@ const CareRecord = {
 
     const query = `
       INSERT INTO care_records (
-        care_code, tree_id, staff_id, caretaker_name, action_type,
+        care_code, tree_id, staff_id, caretaker_name, action_type, service_cost,
         health_before, health_after, notes, image_before_url, image_after_url,
         data_hash, anchor_status, action_date
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, CURRENT_TIMESTAMP))
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, CURRENT_TIMESTAMP))
     `;
 
     db.run(
@@ -115,6 +116,7 @@ const CareRecord = {
         staff_id || null,
         caretaker_name,
         action_type,
+        Number(service_cost || 0),
         health_before || null,
         health_after || null,
         notes || '',

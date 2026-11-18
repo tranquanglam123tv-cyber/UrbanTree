@@ -5,10 +5,7 @@
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
-    "dev": "nodemon src/server.js",
-    "chain:node": "hardhat node",
-    "chain:test": "hardhat test",
-    "chain:deploy": "hardhat run scripts/deploy.js --network localhost"
+    "dev": "nodemon src/server.js"
   },
   "keywords": [
     "urbantree",
@@ -27,13 +24,12 @@
     "express": "^4.19.2",
     "google-auth-library": "^11.3.4",
     "jsonwebtoken": "^9.0.3",
+    "mysql2": "^3.24.6",
     "nodemailer": "^10.5.0",
     "qrcode": "^1.5.4",
     "sqlite3": "^5.1.7"
   },
   "devDependencies": {
-    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
-    "hardhat": "^2.22.10",
     "nodemon": "^3.1.0"
   }
 }

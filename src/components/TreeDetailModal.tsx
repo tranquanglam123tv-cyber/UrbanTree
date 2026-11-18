@@ -57,18 +57,17 @@ export const TreeDetailModal: React.FC<TreeDetailModalProps> = ({
     }
   };
 
-  const handleTamperTest = () => {
-    // Maliciously tamper with health status without updating blockchain anchor
+  const handleTamperTest = async () => {
     const newStatus: TreeHealthStatus = tree.healthStatus === 'GOOD' ? 'POOR' : 'GOOD';
-    storage.tamperTree(tree.id, newStatus);
-    setTamperMessage(`Đã cố tình sửa trộm trạng thái từ "${tree.healthStatus}" thành "${newStatus}" trong cơ sở dữ liệu! Hãy bấm "Kiểm tra toàn vẹn" bên dưới để xem cảnh báo băm sai lệch (MISMATCH).`);
+    await storage.tamperTree(tree.id, newStatus);
+    setTamperMessage(`Đã cố tình sửa trộm dữ liệu trong MySQL mà không cập nhật Blockchain! Hãy bấm "Kiểm tra toàn vẹn" bên dưới để xem cảnh báo HASH MISMATCH.`);
     onTreeUpdated();
     setVerifyResult(null);
   };
 
-  const handleRestoreTamper = () => {
-    storage.resetToDefaults();
-    setTamperMessage('Đã khôi phục dữ liệu mẫu gốc từ Blockchain.');
+  const handleRestoreTamper = async () => {
+    await storage.resetToDefaults();
+    setTamperMessage('Đã khôi phục dữ liệu gốc trong MySQL và đồng bộ lại từ Sepolia.');
     onTreeUpdated();
     setVerifyResult(null);
   };

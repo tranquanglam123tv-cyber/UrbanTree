@@ -88,27 +88,36 @@ const Incident = {
    */
   create: (data, callback) => {
     const {
+      tracking_code,
       tree_id,
       reporter_name,
       reporter_phone,
       description,
+      address,
+      latitude,
+      longitude,
       image_url,
       severity,
       status
     } = data;
 
+    const code = tracking_code || `INC-${Date.now().toString().slice(-5)}`;
     const query = `
-      INSERT INTO incidents (tree_id, reporter_name, reporter_phone, description, image_url, severity, status)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO incidents (tracking_code, tree_id, reporter_name, reporter_phone, description, address, latitude, longitude, image_url, severity, status)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     db.run(
       query,
       [
+        code,
         tree_id || null,
         reporter_name,
         reporter_phone,
         description,
+        address || null,
+        latitude !== undefined ? latitude : null,
+        longitude !== undefined ? longitude : null,
         image_url || '',
         severity || 'Trung bình',
         status || 'Chờ xử lý'
@@ -117,6 +126,7 @@ const Incident = {
         if (err) return callback(err);
         callback(null, {
           id: this ? this.lastID : null,
+          tracking_code: code,
           ...data
         });
       }
@@ -125,37 +135,61 @@ const Incident = {
 
   /**
    * Cập nhật trạng thái sự cố và mốc thời gian hoàn thành (phục vụ Blockchain anchor)
-   * @param {number|string} id 
-   * @param {string} status 'Chờ xử lý' | 'Đang xử lý' | 'Đã hoàn thành' | 'Từ chối'
-   * @param {string} [resolved_at] 
-   * @param {Function} callback (err, result)
    */
-  updateStatus: (id, status, resolved_at, callback) => {
+  updateStatus: (id, status, resolved_at, assigned_staff_id, extra, callback) => {
     if (typeof resolved_at === 'function') {
       callback = resolved_at;
       resolved_at = null;
+      assigned_staff_id = null;
+      extra = {};
+    } else if (typeof assigned_staff_id === 'function') {
+      callback = assigned_staff_id;
+      assigned_staff_id = null;
+      extra = {};
+    } else if (typeof extra === 'function') {
+      callback = extra;
+      extra = {};
     }
+    extra = extra || {};
 
     let resolvedTimestamp = resolved_at;
-    if (!resolvedTimestamp && status === 'Đã hoàn thành') {
+    if (!resolvedTimestamp && (status === 'Đã hoàn thành' || status === 'Đã giải quyết')) {
       resolvedTimestamp = new Date().toISOString().replace('T', ' ').substring(0, 19);
     }
+
+    const hasCost = extra.service_cost !== undefined && extra.service_cost !== null && extra.service_cost !== '';
+    const hasNotes = extra.resolution_notes !== undefined && extra.resolution_notes !== null;
 
     const query = `
       UPDATE incidents 
       SET status = ?, 
-          resolved_at = COALESCE(?, resolved_at)
+          resolved_at = COALESCE(?, resolved_at),
+          assigned_staff_id = COALESCE(?, assigned_staff_id),
+          service_cost = COALESCE(?, service_cost),
+          resolution_notes = COALESCE(?, resolution_notes),
+          updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `;
 
-    db.run(query, [status, resolvedTimestamp, id], function (err) {
-      if (err) return callback(err);
-      callback(null, {
-        changes: this ? this.changes : 0,
+    db.run(
+      query,
+      [
         status,
-        resolved_at: resolvedTimestamp
-      });
-    });
+        resolvedTimestamp,
+        assigned_staff_id || null,
+        hasCost ? Number(extra.service_cost) : null,
+        hasNotes ? String(extra.resolution_notes).trim() : null,
+        id
+      ],
+      function (err) {
+        if (err) return callback(err);
+        callback(null, {
+          changes: this ? this.changes : 0,
+          status,
+          resolved_at: resolvedTimestamp
+        });
+      }
+    );
   },
 
   /**

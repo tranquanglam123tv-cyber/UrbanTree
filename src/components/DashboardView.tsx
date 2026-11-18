@@ -507,7 +507,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <div className="flex items-center gap-2">
                 <h2 className="text-sm font-semibold text-slate-800">Nhật ký Blockchain</h2>
                 <span className="px-2 py-0.5 text-[10px] bg-slate-100 text-slate-600 font-medium rounded-full">
-                  Hardhat Local EVM
+                  Sepolia Testnet
                 </span>
               </div>
               <p className="text-[11px] text-gray-500">Neo băm SHA-256 xác thực Smart Contract</p>

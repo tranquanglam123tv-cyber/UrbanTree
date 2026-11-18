@@ -304,7 +304,7 @@ export const TreeFormModal: React.FC<TreeFormModalProps> = ({ tree, onClose, onS
           <div className="p-3 rounded-lg bg-[#E0EBDD]/60 border border-[#E0EBDD] flex items-center gap-2 text-[#174B36]">
             <ShieldCheck className="w-4 h-4 shrink-0 text-[#347A50]" />
             <span className="text-[11px] leading-tight">
-              Khi bấm lưu, hệ thống tự động băm canonical payload và neo giao dịch vào Hardhat EVM local, lưu txHash và blockNumber.
+              Khi bấm lưu, hệ thống tự động băm canonical payload và neo giao dịch lên Ethereum Sepolia Testnet, lưu txHash và blockNumber.
             </span>
           </div>
 

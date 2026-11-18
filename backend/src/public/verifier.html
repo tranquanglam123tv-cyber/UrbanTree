@@ -89,7 +89,7 @@
                         <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                         <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
                     </span>
-                    <span class="text-xs font-mono text-emerald-300" id="network-status">Node: Localhost:8545</span>
+                    <span class="text-xs font-mono text-emerald-300" id="network-status">Network: Sepolia Testnet</span>
                 </div>
                 <a href="/admin" class="text-xs bg-white/10 hover:bg-white/20 text-white px-3 py-1.5 rounded-xl border border-white/15 backdrop-blur-sm transition flex items-center space-x-1">
                     <i class="fa-solid fa-truck-medical text-vangogh"></i>
@@ -112,8 +112,8 @@
                     <i class="fa-solid fa-fingerprint text-xl"></i>
                 </div>
                 <div>
-                    <h2 class="text-base font-extrabold text-forest">A19 — Kiểm Toán Đối Soát Mã Băm (Zero Mismatch Verifier)</h2>
-                    <p class="text-xs text-gray-500">So sánh mã băm tính toán từ SQLite Off-chain với bản ghi bất biến trên Smart Contract On-chain</p>
+                    <h2 class="text-base font-extrabold text-forest">A19 — Kiểm Toán Đối Soát Minh Bạch (Zero Mismatch Verifier)</h2>
+                    <p class="text-xs text-gray-500">So sánh trực tiếp dữ liệu nghiệp vụ trong MySQL (cây xanh, cắt tỉa, chi phí dịch vụ...) với dấu vân tay bất biến trên Sepolia Smart Contract</p>
                 </div>
             </div>
 
@@ -129,23 +129,19 @@
                         <i class="fa-solid fa-barcode absolute left-3 top-3 text-leaf text-xs pointer-events-none z-10"></i>
                         <select id="verify-record-select" onchange="onSelectRecord(this.value)"
                             class="w-full pl-8 pr-8 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-mono font-bold focus:bg-white focus:ring-2 focus:ring-leaf focus:border-leaf transition appearance-none cursor-pointer shadow-sm">
-                            <option value="TREE-001">TREE-001 — Cây Bàng Đài Loan</option>
-                            <option value="TREE-002">TREE-002 — Cây Giáng Hương</option>
-                            <option value="TREE-9081">TREE-9081 — Cây Sao Đen</option>
-                            <option value="CARE-9469">CARE-9469 — Nhật ký chăm sóc</option>
-                            <option value="__custom__">✍️ Tự nhập mã khác...</option>
+                            <option value="">-- Đang tải danh sách từ Sepolia... --</option>
                         </select>
                         <i class="fa-solid fa-chevron-down absolute right-3 top-3.5 text-gray-400 text-[10px] pointer-events-none"></i>
                     </div>
-                    <input type="text" id="verify-record-id" value="TREE-001" placeholder="Nhập mã bản ghi (VD: TREE-999)..."
+                    <input type="text" id="verify-record-id" value="" placeholder="Nhập mã bản ghi (VD: TREE-001, CARE-...)..."
                         class="hidden mt-2 w-full px-3 py-2 bg-white border border-gray-300 rounded-xl text-xs font-mono font-bold focus:ring-2 focus:ring-leaf focus:border-leaf">
                 </div>
 
                 <div>
-                    <label class="block text-xs font-bold text-gray-700 mb-1.5">Mã băm hiện thời cần đối soát:</label>
+                    <label class="block text-xs font-bold text-gray-700 mb-1.5">Mã băm đối soát (để trống = tự đọc từ MySQL):</label>
                     <div class="relative">
                         <i class="fa-solid fa-hashtag absolute left-3 top-3 text-gray-400 text-xs"></i>
-                        <input type="text" id="verify-current-hash" placeholder="Để trống nếu muốn tra cứu trực tiếp"
+                        <input type="text" id="verify-current-hash" placeholder="Tự động đọc & băm dữ liệu thật từ MySQL"
                             class="w-full pl-8 pr-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-mono focus:bg-white focus:ring-2 focus:ring-leaf focus:border-leaf transition">
                     </div>
                 </div>
@@ -154,7 +150,7 @@
                     <button onclick="runVerification()" id="btn-run-verify"
                         class="w-full bg-gradient-to-r from-forest to-leaf hover:from-leaf hover:to-forest text-white font-extrabold py-2.5 px-4 rounded-xl text-xs shadow-md shadow-forest/20 transition transform active:scale-98 flex items-center justify-center space-x-2">
                         <i class="fa-solid fa-magnifying-glass"></i>
-                        <span>Thực Hiện Xác Minh On-chain</span>
+                        <span>Kiểm Toán Đối Chiếu MySQL ↔ Sepolia</span>
                     </button>
                 </div>
             </div>
@@ -164,7 +160,7 @@
                 <div class="scanner-beam"></div>
                 <div class="flex items-center justify-center space-x-3 text-emerald-400 font-mono text-xs">
                     <i class="fa-solid fa-satellite-dish fa-spin text-base"></i>
-                    <span>ĐANG QUÉT VÀ TRUY VẤN MÃ BĂM TỪ SMART CONTRACT EVM...</span>
+                    <span>ĐANG ĐỌC MYSQL & TRUY VẤN SMART CONTRACT TRÊN SEPOLIA...</span>
                 </div>
             </div>
 
@@ -182,8 +178,8 @@
                         <i class="fa-solid fa-cubes text-xl"></i>
                     </div>
                     <div>
-                        <h2 class="text-base font-extrabold text-forest">A18 — Blockchain Activity Explorer</h2>
-                        <p class="text-xs text-gray-500">Danh sách các bản ghi hồ sơ cây xanh & nhật ký hiện trường đã được neo trên chuỗi khối</p>
+                        <h2 class="text-base font-extrabold text-forest">A18 — Blockchain Activity Explorer (Sepolia)</h2>
+                        <p class="text-xs text-gray-500">Danh sách các bản ghi hồ sơ cây xanh, cắt tỉa chăm sóc (kèm chi phí) & sự cố đã niêm phong trên Sepolia</p>
                     </div>
                 </div>
 
@@ -200,9 +196,9 @@
                         <tr class="bg-gray-50/80 border-b text-gray-600 font-bold uppercase tracking-wider text-[11px]">
                             <th class="p-3.5">Mã Bản Ghi</th>
                             <th class="p-3.5">Phân Loại</th>
+                            <th class="p-3.5">Thông Tin Nghiệp Vụ</th>
                             <th class="p-3.5">Mã Băm SHA-256 (On-chain)</th>
                             <th class="p-3.5">Thời Điểm Ghi</th>
-                            <th class="p-3.5">Ví Ký Số (Recorder)</th>
                             <th class="p-3.5 text-center">Thao Tác</th>
                         </tr>
                     </thead>
@@ -226,7 +222,7 @@
             loadExplorerData();
         });
 
-        async function fetchWithTimeout(url, options = {}, timeoutMs = 4000) {
+        async function fetchWithTimeout(url, options = {}, timeoutMs = 8000) {
             const controller = new AbortController();
             const id = setTimeout(() => controller.abort(), timeoutMs);
             try {
@@ -245,10 +241,10 @@
                 const data = await res.json();
                 const badge = document.getElementById('network-status');
                 if (data.success && data.network.status === 'CONNECTED') {
-                    badge.innerText = `Block #${data.network.blockNumber} • Smart Contract Ready`;
+                    badge.innerText = `Sepolia Block #${data.network.blockNumber} • Ready`;
                     badge.className = 'text-xs font-mono text-emerald-300 font-bold';
                 } else {
-                    badge.innerText = 'Node: Chưa kết nối';
+                    badge.innerText = 'Sepolia: Chưa kết nối';
                     badge.className = 'text-xs font-mono text-red-400';
                 }
             } catch (err) {
@@ -256,6 +252,87 @@
                 badge.innerText = 'Node: Mất kết nối';
                 badge.className = 'text-xs font-mono text-red-400';
             }
+        }
+
+        function formatFieldVal(val, type) {
+            if (val === null || val === undefined || val === '') return '<span class="text-gray-400 italic">(Trống)</span>';
+            if (type === 'currency') {
+                return `${Number(val).toLocaleString('vi-VN')} VNĐ`;
+            }
+            return String(val);
+        }
+
+        function renderFieldComparisonTable(data) {
+            const comp = data.comparison || {};
+            const curSnap = data.currentSnapshot;
+
+            if (comp.fields && comp.fields.length > 0 && comp.hasSnapshot) {
+                return `
+                    <div class="mt-4 bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-xs">
+                        <div class="px-4 py-2.5 bg-gray-50 border-b flex items-center justify-between">
+                            <span class="font-extrabold text-forest text-xs flex items-center space-x-1.5">
+                                <i class="fa-solid fa-table-list text-leaf"></i>
+                                <span>Đối Chiếu Chi Tiết Từng Trường Dữ Liệu (${curSnap?.title || data.recordId})</span>
+                            </span>
+                            <span class="text-[11px] font-bold ${comp.allMatched ? 'text-emerald-700' : 'text-red-600'}">
+                                ${comp.allMatched
+                                    ? `Khớp toàn bộ ${comp.fields.length}/${comp.fields.length} thông tin`
+                                    : `Phát hiện ${comp.changedFields.length} thông tin bị sai lệch!`}
+                            </span>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-xs border-collapse">
+                                <thead>
+                                    <tr class="bg-gray-50/70 border-b text-[11px] text-gray-500 uppercase">
+                                        <th class="p-3">Thông Tin Nghiệp Vụ</th>
+                                        <th class="p-3">Bản Gốc Niêm Phong (Khớp Sepolia)</th>
+                                        <th class="p-3">Dữ Liệu Hiện Tại (MySQL)</th>
+                                        <th class="p-3 text-center">Trạng Thái</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-100">
+                                    ${comp.fields.map(f => {
+                                        const isMismatch = f.matched === false;
+                                        return `
+                                            <tr class="${isMismatch ? 'bg-red-50/90' : 'hover:bg-emerald-50/30'}">
+                                                <td class="p-3 font-bold ${isMismatch ? 'text-red-900' : 'text-gray-700'}">${f.label}</td>
+                                                <td class="p-3 font-mono ${isMismatch ? 'text-blue-800 font-bold' : 'text-gray-700'}">${formatFieldVal(f.originalValue, f.type)}</td>
+                                                <td class="p-3 font-mono ${isMismatch ? 'text-red-700 font-extrabold underline decoration-red-400' : 'text-emerald-800 font-semibold'}">${formatFieldVal(f.currentValue, f.type)}</td>
+                                                <td class="p-3 text-center">
+                                                    ${isMismatch
+                                                        ? '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-red-600 text-white"><i class="fa-solid fa-xmark mr-1"></i>SAI KHỚP (Bị sửa)</span>'
+                                                        : '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800"><i class="fa-solid fa-check mr-1"></i>Khớp</span>'}
+                                                </td>
+                                            </tr>
+                                        `;
+                                    }).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+            }
+
+            if (curSnap && curSnap.fields && curSnap.fields.length > 0) {
+                return `
+                    <div class="mt-4 bg-white rounded-2xl border border-amber-200 overflow-hidden">
+                        <div class="px-4 py-2.5 bg-amber-50 border-b border-amber-200 text-xs font-bold text-amber-900 flex items-center justify-between">
+                            <span><i class="fa-solid fa-circle-info mr-1.5"></i>Thông Tin Hiện Tại Trong MySQL (${curSnap.title})</span>
+                            <span class="text-[11px] font-normal text-amber-700">Bản ghi cũ chưa lưu snapshot gốc lúc neo</span>
+                        </div>
+                        <div class="p-3 grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                            ${curSnap.fields.map(f => `
+                                <div class="p-2 rounded-lg bg-gray-50 border border-gray-100">
+                                    <span class="text-[11px] text-gray-500 block">${f.label}:</span>
+                                    <span class="font-bold text-gray-800 font-mono">${formatFieldVal(f.value, f.type)}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+
+            return '';
         }
 
         async function runVerification() {
@@ -266,25 +343,23 @@
             const btn = document.getElementById('btn-run-verify');
 
             if (!recordId) {
-                alert('Vui lòng nhập Mã bản ghi cần kiểm toán');
+                alert('Vui lòng chọn hoặc nhập Mã bản ghi cần kiểm toán');
                 return;
             }
 
-            // Bật hiệu ứng quét Laser
             resultBox.classList.add('hidden');
             scannerBox.classList.remove('hidden');
             btn.disabled = true;
 
-            // Chờ quét laser 700ms để tạo hiệu ứng công nghệ cao
-            await new Promise(r => setTimeout(r, 700));
+            await new Promise(r => setTimeout(r, 400));
 
             try {
-                let url = `${API_BASE}/verify/${recordId}`;
+                let url = `${API_BASE}/verify/${encodeURIComponent(recordId)}`;
                 if (currentHash) {
                     url += `?currentHash=${encodeURIComponent(currentHash)}`;
                 }
 
-                const res = await fetchWithTimeout(url, {}, 5000);
+                const res = await fetchWithTimeout(url, {}, 8000);
                 const data = await res.json();
 
                 scannerBox.classList.add('hidden');
@@ -308,60 +383,86 @@
                         <div class="p-5 rounded-2xl border border-amber-300 bg-gradient-to-br from-amber-50 via-white to-yellow-50 shadow-sm text-xs">
                             <div class="flex items-center space-x-2 mb-2 font-bold text-amber-900 text-sm">
                                 <i class="fa-solid fa-circle-exclamation text-amber-600 text-lg"></i>
-                                <span>BẢN GHI CHƯA ĐƯỢC NEO LÊN BLOCKCHAIN (NOT FOUND ON-CHAIN)</span>
+                                <span>BẢN GHI CHƯA ĐƯỢC NEO LÊN SEPOLIA (NOT FOUND ON-CHAIN)</span>
                             </div>
-                            <p class="text-gray-600 mb-3">Mã bản ghi <b class="font-mono text-gray-900">${recordId}</b> chưa tồn tại trên Smart Contract. Bản ghi này cần được nhân viên nghiệm thu hoặc bấm neo dữ liệu trước khi kiểm toán.</p>
-                            <div class="bg-amber-100/70 p-3 rounded-xl border border-amber-200 font-mono text-[11px] text-amber-900 flex justify-between items-center">
-                                <span>Gợi ý: Mở tab Admin hoặc chạy script mẫu để neo hồ sơ cây này.</span>
-                            </div>
+                            <p class="text-gray-600 mb-3">Mã bản ghi <b class="font-mono text-gray-900">${recordId}</b> chưa tồn tại trên Smart Contract Sepolia.</p>
                         </div>
                     `;
                     return;
                 }
 
                 const isMatch = rec.isValid;
+                const snapSummary = data.currentSnapshot?.summary || data.originalSnapshot?.summary || '';
+                const hasSnapshot = data.comparison?.hasSnapshot;
+                const changedNames = (data.comparison?.changedFields || []).map(f => f.label);
 
                 resultBox.innerHTML = `
                     <div class="p-5 rounded-2xl border transition-all duration-300 ${isMatch ? 'bg-gradient-to-br from-emerald-50 via-white to-green-50 border-emerald-300 shadow-lg shadow-emerald-500/10' : 'bg-gradient-to-br from-red-50 via-white to-rose-50 border-red-300 shadow-lg shadow-red-500/10'}">
                         
-                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4 border-b pb-3">
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-3 border-b pb-3">
                             <div>
                                 <div class="flex items-center space-x-2 font-black text-sm sm:text-base">
                                     ${isMatch 
                                         ? '<i class="fa-solid fa-circle-check text-emerald-600 text-xl"></i><span class="text-emerald-900 tracking-tight">BẢN GHI NGUYÊN VẸN 100% (VERIFIED VALID)</span>' 
-                                        : '<i class="fa-solid fa-triangle-exclamation text-red-600 text-xl animate-bounce"></i><span class="text-red-900 tracking-tight">CẢNH BÁO: DỮ LIỆU ĐÃ BỊ SỬA ĐỔI (HASH MISMATCH)</span>'}
+                                        : '<i class="fa-solid fa-triangle-exclamation text-red-600 text-xl animate-bounce"></i><span class="text-red-900 tracking-tight">CẢNH BÁO: PHÁT HIỆN SAI LỆCH DỮ LIỆU (HASH MISMATCH)</span>'}
                                 </div>
-                                <p class="text-xs text-gray-600 mt-1">
+                                <p class="text-xs text-gray-700 mt-1 font-medium">
                                     ${isMatch 
-                                        ? 'Dữ liệu off-chain trùng khớp tuyệt đối với dấu vân tay bất biến được ký gửi trên Smart Contract.' 
-                                        : 'Mã băm hiện thời của bản ghi không khớp với mã băm gốc đã lưu trên sổ cái chuỗi! Phát hiện hành vi sửa lén dữ liệu.'}
+                                        ? 'Toàn bộ thông tin nghiệp vụ trong MySQL khớp 100% với dấu vân tay bất biến đã niêm phong trên Sepolia.' 
+                                        : (changedNames.length > 0
+                                            ? `Cảnh báo: Dữ liệu trong MySQL đã bị sửa ở mục: <b class="text-red-700">${changedNames.join(', ')}</b>!`
+                                            : (data.manualHashOverride
+                                                ? 'Mã băm bạn tự nhập vào ô đối soát không khớp với mã băm gốc trên Sepolia.'
+                                                : 'Mã băm tính từ MySQL hiện tại khác với mã băm gốc đã niêm phong trên Sepolia!'))}
                                 </p>
+                                ${snapSummary ? `<div class="mt-2 inline-block px-3 py-1 rounded-lg bg-white border border-gray-200 text-xs font-bold text-forest">${snapSummary}</div>` : ''}
                             </div>
-                            <span class="px-3 py-1 rounded-xl font-mono text-xs font-bold ${isMatch ? 'bg-emerald-200 text-emerald-900' : 'bg-red-200 text-red-900'}">
+                            <span class="px-3 py-1 rounded-xl font-mono text-xs font-bold shrink-0 ${isMatch ? 'bg-emerald-200 text-emerald-900' : 'bg-red-200 text-red-900'}">
                                 ${rec.recordId}
                             </span>
                         </div>
 
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs bg-white/90 p-4 rounded-xl border font-mono">
+                        ${renderFieldComparisonTable(data)}
+
+                        <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3 text-xs bg-white/90 p-4 rounded-xl border font-mono">
                             <div>
-                                <span class="text-gray-500 block text-[11px] mb-0.5">Mã băm lưu trữ trên Blockchain:</span>
+                                <span class="text-gray-500 block text-[11px] mb-0.5 font-sans font-semibold">Mã băm gốc trên Sepolia Blockchain:</span>
                                 <span class="text-blue-700 font-bold break-all bg-blue-50 p-1.5 rounded block border border-blue-200">${rec.storedHash}</span>
                             </div>
                             <div>
-                                <span class="text-gray-500 block text-[11px] mb-0.5">Mã băm đối soát gửi vào:</span>
+                                <span class="text-gray-500 block text-[11px] mb-0.5 font-sans font-semibold">Mã băm tính từ MySQL hiện tại:</span>
                                 <span class="${isMatch ? 'text-emerald-700 font-bold bg-emerald-50 border-emerald-200' : 'text-red-600 font-bold bg-red-50 border-red-300'} break-all p-1.5 rounded block border">
-                                    ${rec.currentHash || 'Chưa cung cấp'}
+                                    ${rec.currentHash || 'Chưa tính được'}
                                 </span>
                             </div>
-                            <div class="pt-2 text-gray-600 flex items-center">
+                            <div class="pt-1 text-gray-600 flex items-center">
                                 <i class="fa-regular fa-clock mr-1.5 text-leaf"></i>
-                                <span>Thời điểm ký gửi:</span> <span class="text-gray-900 font-bold ml-1">${rec.dateFormatted}</span>
+                                <span>Thời điểm niêm phong:</span> <span class="text-gray-900 font-bold ml-1">${rec.dateFormatted}</span>
                             </div>
-                            <div class="pt-2 text-gray-600 flex items-center">
+                            <div class="pt-1 text-gray-600 flex items-center">
                                 <i class="fa-solid fa-wallet mr-1.5 text-leaf"></i>
-                                <span>Ví người ký:</span> <span class="text-gray-900 font-bold ml-1 break-all">${rec.recorder}</span>
+                                <span>Ví ký số:</span> <span class="text-gray-900 font-bold ml-1 break-all">${rec.recorder}</span>
                             </div>
+                            ${data.txHash ? `
+                            <div class="md:col-span-2 pt-1 text-gray-600 flex items-center flex-wrap gap-2">
+                                <i class="fa-solid fa-up-right-from-square text-leaf"></i>
+                                <span>Sepolia Etherscan:</span>
+                                <a href="https://sepolia.etherscan.io/tx/${data.txHash}" target="_blank" class="text-blue-600 hover:underline font-bold break-all">${data.txHash}</a>
+                            </div>` : ''}
                         </div>
+
+                        ${hasSnapshot ? `
+                        <div class="mt-4 pt-3 border-t border-gray-200/70 flex flex-wrap items-center justify-between gap-2 text-xs">
+                            <span class="text-gray-500 italic"><i class="fa-solid fa-flask mr-1"></i>Thử nghiệm kiểm toán trực tiếp trên MySQL:</span>
+                            <div class="flex items-center space-x-2">
+                                <button onclick="runTamperDemo('${rec.recordId}', 'tamper')" class="px-3 py-1.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold transition shadow-sm">
+                                    <i class="fa-solid fa-user-secret mr-1"></i>Giả lập sửa lén MySQL (Gian lận)
+                                </button>
+                                <button onclick="runTamperDemo('${rec.recordId}', 'restore')" class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold transition shadow-sm">
+                                    <i class="fa-solid fa-rotate-left mr-1"></i>Khôi phục dữ liệu gốc MySQL
+                                </button>
+                            </div>
+                        </div>` : ''}
                     </div>
                 `;
             } catch (err) {
@@ -372,60 +473,76 @@
             }
         }
 
+        async function runTamperDemo(recordId, action) {
+            try {
+                const res = await fetch(`${API_BASE}/tamper-demo`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ recordId, action })
+                });
+                const data = await res.json();
+                if (!data.success) {
+                    alert(data.message);
+                    return;
+                }
+                document.getElementById('verify-current-hash').value = '';
+                await runVerification();
+                loadExplorerData(false);
+            } catch (err) {
+                alert('Lỗi: ' + err.message);
+            }
+        }
+
         let explorerRecordsMap = {};
 
         function onSelectRecord(val) {
             const inputCustom = document.getElementById('verify-record-id');
             const hashInput = document.getElementById('verify-current-hash');
-            
+            hashInput.value = ''; // Luôn để trống để đối soát dữ liệu thật từ MySQL
+
             if (val === '__custom__') {
                 inputCustom.classList.remove('hidden');
                 inputCustom.value = '';
                 inputCustom.focus();
-                hashInput.value = '';
             } else if (val) {
                 inputCustom.classList.add('hidden');
                 inputCustom.value = val;
-                const rec = explorerRecordsMap[val];
-                if (rec && rec.dataHash) {
-                    hashInput.value = rec.dataHash;
-                }
             }
         }
 
-        async function loadExplorerData() {
+        async function loadExplorerData(autoSelectFirst = true) {
             const tbody = document.getElementById('explorer-tbody');
-            tbody.innerHTML = '<tr><td colspan="6" class="p-6 text-center text-gray-400"><i class="fa-solid fa-spinner fa-spin mr-2 text-leaf text-base"></i> Đang truy vấn sổ cái...</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="6" class="p-6 text-center text-gray-400"><i class="fa-solid fa-spinner fa-spin mr-2 text-leaf text-base"></i> Đang truy vấn sổ cái Sepolia...</td></tr>';
 
             try {
-                const res = await fetchWithTimeout(`${API_BASE}/explorer`, {}, 5000);
+                const res = await fetchWithTimeout(`${API_BASE}/explorer`, {}, 8000);
                 const data = await res.json();
 
                 if (!data.success || !data.records || data.records.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="6" class="p-6 text-center text-gray-400">Chưa có bản ghi nào được neo trên Blockchain local.</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="6" class="p-6 text-center text-gray-400">Chưa có bản ghi nào được neo trên Sepolia. Hãy vào Admin tạo nhật ký chăm sóc / nghiệm thu sự cố!</td></tr>';
                     return;
                 }
 
-                // Cập nhật bộ nhớ cache map để tra cứu nhanh khi chọn dropdown
                 explorerRecordsMap = {};
                 data.records.forEach(r => {
                     explorerRecordsMap[r.recordId] = r;
                 });
 
-                // Tự động đổ dữ liệu vào Menu Xổ Xuống (Dropdown Select)
                 const selectBox = document.getElementById('verify-record-select');
                 if (selectBox) {
+                    const currentVal = document.getElementById('verify-record-id').value;
                     selectBox.innerHTML = `
                         <option value="">-- Bấm vào đây để chọn Mã Bản Ghi --</option>
-                        ${data.records.map(r => `<option value="${r.recordId}">[${r.recordType}] ${r.recordId}</option>`).join('')}
+                        ${data.records.map(r => `<option value="${r.recordId}">[${r.recordType}] ${r.recordId}${r.summary ? ' — ' + r.summary : ''}</option>`).join('')}
                         <option value="__custom__">✍️ Tự nhập mã khác...</option>
                     `;
-                    // Mặc định chọn ngay bản ghi đầu tiên và điền sẵn mã băm
-                    if (data.records.length > 0) {
-                        const firstRec = data.records[0];
-                        selectBox.value = firstRec.recordId;
-                        document.getElementById('verify-record-id').value = firstRec.recordId;
-                        document.getElementById('verify-current-hash').value = firstRec.dataHash;
+                    if (autoSelectFirst && data.records.length > 0) {
+                        const targetRec = data.records[data.records.length - 1];
+                        selectBox.value = targetRec.recordId;
+                        document.getElementById('verify-record-id').value = targetRec.recordId;
+                        document.getElementById('verify-current-hash').value = '';
+                    } else if (currentVal) {
+                        selectBox.value = currentVal;
                     }
                 }
 
@@ -433,11 +550,14 @@
                     <tr class="hover:bg-emerald-50/40 transition">
                         <td class="p-3.5 font-mono font-bold text-forest">${r.recordId}</td>
                         <td class="p-3.5"><span class="px-2 py-0.5 rounded text-[10px] bg-blue-50 text-blue-800 font-bold border border-blue-200">${r.recordType}</span></td>
-                        <td class="p-3.5 font-mono text-[11px] text-gray-600 break-all max-w-xs">${r.dataHash}</td>
+                        <td class="p-3.5 text-gray-700 font-medium max-w-xs">
+                            <div>${r.summary || '<span class="text-gray-400 italic">Bản ghi chưa có mô tả</span>'}</div>
+                            ${r.isTamperedInDb ? '<span class="inline-block mt-1 px-2 py-0.5 rounded text-[10px] font-extrabold bg-red-100 text-red-700">⚠️ Dữ liệu MySQL đang lệch với Sepolia!</span>' : ''}
+                        </td>
+                        <td class="p-3.5 font-mono text-[11px] text-gray-600 break-all max-w-[200px]">${r.dataHash}</td>
                         <td class="p-3.5 text-gray-500 text-[11px]">${r.dateFormatted}</td>
-                        <td class="p-3.5 font-mono text-[11px] text-gray-500 break-all max-w-[120px]">${r.recorder}</td>
                         <td class="p-3.5 text-center">
-                            <button onclick="checkThisRecord('${r.recordId}', '${r.dataHash}')" class="text-xs bg-leaf/10 hover:bg-leaf text-leaf hover:text-white font-bold px-2.5 py-1 rounded-lg transition">
+                            <button onclick="checkThisRecord('${r.recordId}')" class="text-xs bg-leaf/10 hover:bg-leaf text-leaf hover:text-white font-bold px-2.5 py-1 rounded-lg transition">
                                 <i class="fa-solid fa-magnifying-glass mr-1"></i>Kiểm toán
                             </button>
                         </td>
@@ -448,12 +568,12 @@
             }
         }
 
-        function checkThisRecord(id, hash) {
+        function checkThisRecord(id) {
             const selectBox = document.getElementById('verify-record-select');
             if (selectBox) selectBox.value = id;
             document.getElementById('verify-record-id').classList.add('hidden');
             document.getElementById('verify-record-id').value = id;
-            document.getElementById('verify-current-hash').value = hash;
+            document.getElementById('verify-current-hash').value = '';
             window.scrollTo({ top: 0, behavior: 'smooth' });
             setTimeout(() => {
                 runVerification();

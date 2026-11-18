@@ -180,7 +180,108 @@
                 </table>
             </div>
         </div>
+
+        <!-- Bảng ghi nhận Nhật ký Chăm sóc / Cắt tỉa (kèm Chi phí dịch vụ & Neo Sepolia) -->
+        <div class="bg-white rounded-3xl p-6 shadow-sm border border-green-900/5">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 border-b pb-4">
+                <div>
+                    <h2 class="text-base font-extrabold text-forest flex items-center space-x-2">
+                        <i class="fa-solid fa-scissors text-leaf"></i>
+                        <span>Ghi Nhận Chăm Sóc / Cắt Tỉa & Chi Phí Dịch Vụ (Neo Sepolia)</span>
+                    </h2>
+                    <p class="text-xs text-gray-500 mt-0.5">Mọi thông tin loại dịch vụ, cây xanh và số tiền chi trả sẽ được băm SHA-256 và khóa cứng lên Smart Contract.</p>
+                </div>
+            </div>
+
+            <form id="care-form" onsubmit="submitCareRecord(event)" class="grid grid-cols-1 md:grid-cols-6 gap-3 text-xs mb-5 bg-emerald-50/50 p-4 rounded-2xl border border-emerald-100">
+                <div>
+                    <label class="block font-bold text-gray-600 mb-1">Cây xanh</label>
+                    <select id="care-tree-code" required class="w-full px-3 py-2 rounded-xl border border-gray-200 bg-white font-semibold">
+                        <option value="TREE-001">TREE-001 — Bàng Đài Loan</option>
+                        <option value="TREE-002">TREE-002 — Giáng Hương</option>
+                        <option value="TREE-003">TREE-003 — Lim Xẹt</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block font-bold text-gray-600 mb-1">Dịch vụ thực hiện</label>
+                    <select id="care-action-type" required class="w-full px-3 py-2 rounded-xl border border-gray-200 bg-white font-semibold">
+                        <option value="Cắt tỉa">Cắt tỉa</option>
+                        <option value="Tưới nước">Tưới nước</option>
+                        <option value="Bón phân">Bón phân</option>
+                        <option value="Trị sâu bệnh">Trị sâu bệnh</option>
+                        <option value="Gia cố cọc">Gia cố cọc</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block font-bold text-gray-600 mb-1">Tiền dịch vụ (VNĐ)</label>
+                    <input id="care-service-cost" type="number" min="0" step="10000" value="1500000" required class="w-full px-3 py-2 rounded-xl border border-gray-200 bg-white font-mono font-bold text-emerald-700" />
+                </div>
+                <div>
+                    <label class="block font-bold text-gray-600 mb-1">Đội / Nhân viên</label>
+                    <input id="care-caretaker" type="text" value="Đội Cơ Động Cây Xanh Q.1" required class="w-full px-3 py-2 rounded-xl border border-gray-200 bg-white" />
+                </div>
+                <div>
+                    <label class="block font-bold text-gray-600 mb-1">Ghi chú chi tiết</label>
+                    <input id="care-notes" type="text" value="Cắt tỉa 4 nhánh khô tán cao trước mùa mưa" class="w-full px-3 py-2 rounded-xl border border-gray-200 bg-white" />
+                </div>
+                <div class="flex items-end">
+                    <button id="btn-submit-care" type="submit" class="w-full bg-leaf hover:bg-forest text-white font-bold py-2 px-4 rounded-xl transition flex items-center justify-center space-x-1.5 shadow-sm">
+                        <i class="fa-solid fa-link"></i>
+                        <span>Lưu & Neo Sepolia</span>
+                    </button>
+                </div>
+            </form>
+
+            <div class="overflow-x-auto rounded-xl border border-gray-100">
+                <table class="w-full text-left text-xs border-collapse">
+                    <thead>
+                        <tr class="bg-gray-50/80 border-b text-gray-600 font-bold uppercase tracking-wider text-[11px]">
+                            <th class="p-3">Mã Chăm Sóc</th>
+                            <th class="p-3">Cây Xanh</th>
+                            <th class="p-3">Dịch Vụ</th>
+                            <th class="p-3">Chi Phí (VNĐ)</th>
+                            <th class="p-3">Đơn Vị Thực Hiện</th>
+                            <th class="p-3">Trạng Thái Chuỗi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="care-tbody" class="divide-y divide-gray-100">
+                        <tr><td colspan="6" class="p-5 text-center text-gray-400">Đang tải danh sách nhật ký chăm sóc...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </main>
+
+    <!-- MODAL NHẬP CHI PHÍ & NGHIỆM THU SỰ CỐ -->
+    <div id="modal-finish-form" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+        <div class="w-full max-w-md bg-white rounded-3xl shadow-2xl border border-emerald-500/30 p-6 space-y-4">
+            <div class="flex justify-between items-center border-b pb-3">
+                <h3 class="font-extrabold text-forest text-base flex items-center space-x-2">
+                    <i class="fa-solid fa-file-invoice-dollar text-leaf"></i>
+                    <span>Nghiệm Thu Sự Cố & Chi Phí Lên Sepolia</span>
+                </h3>
+                <button onclick="closeFinishForm()" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <input type="hidden" id="finish-inc-id" />
+            <div class="space-y-3 text-xs">
+                <div>
+                    <label class="block font-bold text-gray-600 mb-1">Chi phí dịch vụ xử lý / cắt tỉa (VNĐ):</label>
+                    <input id="finish-cost" type="number" min="0" step="10000" value="2500000" class="w-full px-3 py-2.5 rounded-xl border border-gray-300 font-mono font-bold text-emerald-700" />
+                </div>
+                <div>
+                    <label class="block font-bold text-gray-600 mb-1">Nội dung biên bản nghiệm thu:</label>
+                    <textarea id="finish-notes" rows="3" class="w-full px-3 py-2.5 rounded-xl border border-gray-300">Đã điều xe thang cắt tỉa cành gãy, dọn dẹp mặt đường an toàn.</textarea>
+                </div>
+            </div>
+            <div class="flex space-x-2 pt-2">
+                <button onclick="closeFinishForm()" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-2.5 rounded-xl font-bold text-xs">Hủy</button>
+                <button id="btn-confirm-finish" onclick="confirmFinishOnChain()" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-xl font-bold text-xs flex items-center justify-center space-x-1.5">
+                    <i class="fa-solid fa-link"></i>
+                    <span>Xác Nhận & Ghi Sepolia</span>
+                </button>
+            </div>
+        </div>
+    </div>
 
     <!-- MODAL POPUP: TIẾN TRÌNH NGHIỆM THU ON-CHAIN -->
     <div id="modal-onchain" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 hidden">
@@ -191,7 +292,7 @@
                     <div class="w-8 h-8 rounded-lg bg-emerald-100 text-leaf flex items-center justify-center">
                         <i class="fa-solid fa-link text-base"></i>
                     </div>
-                    <span>Nghiệm Thu & Bảo Chứng Blockchain</span>
+                    <span>Nghiệm Thu & Bảo Chứng Blockchain (Sepolia)</span>
                 </div>
                 <button onclick="closeOnChainModal()" class="text-gray-400 hover:text-gray-600 text-lg">
                     <i class="fa-solid fa-xmark"></i>
@@ -201,20 +302,20 @@
             <!-- Tiến trình 4 bước -->
             <div class="space-y-3 text-xs bg-gray-50 p-4 rounded-2xl border border-gray-200">
                 <div class="flex items-center justify-between text-gray-700">
-                    <span class="flex items-center"><i class="fa-solid fa-check text-green-600 mr-2"></i>1. Chuẩn hóa Canonical JSON:</span>
-                    <span class="font-mono text-gray-500">INCIDENT_REPORT</span>
+                    <span class="flex items-center"><i class="fa-solid fa-check text-green-600 mr-2"></i>1. Dữ liệu nghiệp vụ niêm phong:</span>
+                    <span id="modal-record-type" class="font-mono text-gray-500">INCIDENT_REPORT</span>
                 </div>
                 <div class="flex items-center justify-between text-gray-700">
-                    <span class="flex items-center"><i class="fa-solid fa-check text-green-600 mr-2"></i>2. Tính toán dấu SHA-256:</span>
-                    <span class="font-mono text-leaf font-bold">Matched 100%</span>
+                    <span class="flex items-center"><i class="fa-solid fa-check text-green-600 mr-2"></i>2. Mã băm SHA-256:</span>
+                    <span id="modal-datahash" class="font-mono text-leaf font-bold text-[10px] truncate max-w-[220px]">---</span>
                 </div>
                 <div class="flex items-center justify-between text-gray-700">
-                    <span class="flex items-center"><i class="fa-solid fa-check text-green-600 mr-2"></i>3. Ký số ví Quản trị viên:</span>
-                    <span class="font-mono text-gray-500 text-[10px]">0xf39Fd6e...92266</span>
+                    <span class="flex items-center"><i class="fa-solid fa-check text-green-600 mr-2"></i>3. Ví ký số Sepolia:</span>
+                    <span id="modal-recorder" class="font-mono text-gray-500 text-[10px]">0xB4CC9A1...C04d3</span>
                 </div>
                 <div class="flex items-center justify-between text-emerald-800 font-bold bg-emerald-100/70 p-2 rounded-xl">
                     <span class="flex items-center"><i class="fa-solid fa-circle-check text-emerald-600 mr-2"></i>4. Trạng thái giao dịch:</span>
-                    <span class="font-mono text-emerald-700">CONFIRMED (Block #<span id="modal-block">2</span>)</span>
+                    <span class="font-mono text-emerald-700">CONFIRMED (Block #<span id="modal-block">---</span>)</span>
                 </div>
             </div>
 
@@ -222,7 +323,7 @@
             <div>
                 <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">Mã Giao Dịch (Transaction Hash):</label>
                 <div class="flex items-center space-x-2 bg-emerald-950 p-3 rounded-xl border border-emerald-700/50">
-                    <span class="font-mono text-[11px] text-emerald-300 break-all flex-1" id="modal-txhash">0xdbd803cf6eb0c2c3977fdcccd73f992e45e1c97e3ef876dfd1cb2a588cde93c5</span>
+                    <span class="font-mono text-[11px] text-emerald-300 break-all flex-1" id="modal-txhash">---</span>
                     <button onclick="copyTxHash()" class="px-2.5 py-1.5 rounded-lg bg-emerald-800 hover:bg-emerald-700 text-white text-xs font-semibold shrink-0 transition" title="Sao chép">
                         <i class="fa-regular fa-copy"></i>
                     </button>
@@ -245,7 +346,82 @@
     <script>
         window.addEventListener('DOMContentLoaded', () => {
             loadIncidents();
+            loadTreesForCare();
+            loadCareRecords();
         });
+
+        async function loadTreesForCare() {
+            try {
+                const res = await fetch('/api/trees');
+                const data = await res.json();
+                if (data.success && Array.isArray(data.data) && data.data.length > 0) {
+                    const sel = document.getElementById('care-tree-code');
+                    sel.innerHTML = data.data.map(t => `<option value="${t.tree_code}">${t.tree_code} — ${t.species}</option>`).join('');
+                }
+            } catch (e) {}
+        }
+
+        async function loadCareRecords() {
+            const tbody = document.getElementById('care-tbody');
+            try {
+                const res = await fetch('/api/care-records');
+                const data = await res.json();
+                if (!data.success || !data.data || data.data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" class="p-5 text-center text-gray-400">Chưa có nhật ký chăm sóc nào. Hãy thử tạo 1 bản ghi cắt tỉa ở form trên!</td></tr>';
+                    return;
+                }
+                tbody.innerHTML = data.data.map(c => `
+                    <tr class="hover:bg-emerald-50/40 transition">
+                        <td class="p-3 font-mono font-bold text-forest">${c.care_code || 'CARE-' + c.id}</td>
+                        <td class="p-3"><span class="bg-green-100 text-leaf font-bold px-2 py-0.5 rounded font-mono">${c.tree_code || '#' + c.tree_id}</span> <span class="text-gray-600 ml-1">${c.species || ''}</span></td>
+                        <td class="p-3 font-semibold text-gray-800">${c.action_type}</td>
+                        <td class="p-3 font-mono font-bold text-emerald-700">${Number(c.service_cost || 0).toLocaleString('vi-VN')} VNĐ</td>
+                        <td class="p-3 text-gray-600">${c.caretaker_name}</td>
+                        <td class="p-3">
+                            ${c.anchor_status === 'CONFIRMED'
+                                ? `<a href="/verifier" class="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100"><i class="fa-solid fa-circle-check mr-1"></i>Đã neo Sepolia</a>`
+                                : `<span class="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200">${c.anchor_status || 'PENDING'}</span>`}
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (err) {
+                tbody.innerHTML = `<tr><td colspan="6" class="p-5 text-center text-red-500">Lỗi tải nhật ký: ${err.message}</td></tr>`;
+            }
+        }
+
+        async function submitCareRecord(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btn-submit-care');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Đang ghi lên Sepolia...';
+            try {
+                const payload = {
+                    tree_code: document.getElementById('care-tree-code').value,
+                    action_type: document.getElementById('care-action-type').value,
+                    service_cost: Number(document.getElementById('care-service-cost').value || 0),
+                    caretaker_name: document.getElementById('care-caretaker').value,
+                    notes: document.getElementById('care-notes').value
+                };
+                const res = await fetch('/api/care-records', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (!data.success) {
+                    alert('Lỗi: ' + (data.message || 'Không thể lưu nhật ký'));
+                } else {
+                    const bc = data.blockchain || {};
+                    showOnChainModal(bc.txHash || 'PENDING', bc.blockNumber || '---', 'CARE_LOG', data.data?.data_hash || '---', bc.recorder || '0xB4CC9A1...C04d3');
+                    loadCareRecords();
+                }
+            } catch (err) {
+                alert('Lỗi kết nối: ' + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-link"></i><span>Lưu & Neo Sepolia</span>';
+            }
+        }
 
         async function loadIncidents() {
             const tbody = document.getElementById('incidents-tbody');
@@ -307,7 +483,10 @@
                                 <div class="font-bold text-gray-800">${inc.reporter_name || 'Khách vãng lai'}</div>
                                 <div class="text-[11px] text-gray-500 font-mono">${inc.reporter_phone || '---'}</div>
                             </td>
-                            <td class="p-3.5 max-w-xs text-gray-700">${inc.description || 'Không có mô tả'}</td>
+                            <td class="p-3.5 max-w-xs text-gray-700">
+                                <div>${inc.description || 'Không có mô tả'}</div>
+                                ${Number(inc.service_cost || 0) > 0 ? `<div class="text-[11px] font-mono font-bold text-emerald-700 mt-0.5">Chi phí: ${Number(inc.service_cost).toLocaleString('vi-VN')} VNĐ</div>` : ''}
+                            </td>
                             <td class="p-3.5">
                                 <span class="px-2 py-0.5 rounded text-[11px] ${sevBadge}">${inc.severity || 'Trung bình'}</span>
                             </td>
@@ -327,7 +506,7 @@
             document.getElementById('stat-total').innerText = incidents.length;
             document.getElementById('stat-pending').innerText = incidents.filter(i => i.status === 'Chờ xử lý').length;
             document.getElementById('stat-processing').innerText = incidents.filter(i => i.status === 'Đang xử lý').length;
-            document.getElementById('stat-completed').innerText = incidents.filter(i => i.status === 'Đã giải quyết' || i.status === 'Đã xử lý').length;
+            document.getElementById('stat-completed').innerText = incidents.filter(i => i.status === 'Đã giải quyết' || i.status === 'Đã xử lý' || i.status === 'Đã hoàn thành').length;
         }
 
         async function dispatchTruck(id) {
@@ -348,40 +527,64 @@
             }
         }
 
-        async function finishOnChain(id, treeCode) {
+        function finishOnChain(id) {
+            document.getElementById('finish-inc-id').value = id;
+            document.getElementById('modal-finish-form').classList.remove('hidden');
+        }
+
+        function closeFinishForm() {
+            document.getElementById('modal-finish-form').classList.add('hidden');
+        }
+
+        async function confirmFinishOnChain() {
+            const id = document.getElementById('finish-inc-id').value;
+            const service_cost = Number(document.getElementById('finish-cost').value || 0);
+            const resolution_notes = document.getElementById('finish-notes').value;
+            const btn = document.getElementById('btn-confirm-finish');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Đang ghi Sepolia...';
+
             try {
-                // 1. Cập nhật trạng thái
-                await fetch(`/api/incidents/${id}/status`, {
+                const res = await fetch(`/api/incidents/${id}/status`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ status: 'Đã giải quyết' })
-                });
-
-                // 2. Neo lên Smart Contract
-                const hashRes = await fetch('/api/blockchain/anchor', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        recordId: `INC-${id}`,
-                        recordType: 'INCIDENT_REPORT',
-                        dataHash: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'
+                        status: 'Đã giải quyết',
+                        service_cost,
+                        resolution_notes
                     })
                 });
-                const data = await hashRes.json();
-
-                const tx = data.txHash || '0x' + Array.from({length: 64}, () => Math.floor(Math.random()*16).toString(16)).join('');
-                const block = data.blockNumber || 4;
-
-                showOnChainModal(tx, block);
+                const data = await res.json();
+                closeFinishForm();
+                if (data.success && data.blockchain) {
+                    const bc = data.blockchain;
+                    showOnChainModal(bc.txHash || 'Đã neo trước đó', bc.blockNumber || '---', 'INCIDENT_REPORT', bc.dataHash || '---', bc.recorder || '0xB4CC9A1...C04d3');
+                }
                 loadIncidents();
             } catch (err) {
                 alert('Lỗi nghiệm thu on-chain: ' + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-link"></i><span>Xác Nhận & Ghi Sepolia</span>';
             }
         }
 
-        function showOnChainModal(txHash, block) {
+        async function viewAudit(id) {
+            try {
+                const res = await fetch(`/api/blockchain/verify/INC-${id}`);
+                const data = await res.json();
+                showOnChainModal(data.txHash || 'Chưa có TxHash trong DB', data.blockNumber || '---', 'INCIDENT_REPORT', data.storedHash || '---', data.recorder || '0xB4CC9A1...C04d3');
+            } catch (err) {
+                alert('Lỗi tải thông tin audit: ' + err.message);
+            }
+        }
+
+        function showOnChainModal(txHash, block, recordType, dataHash, recorder) {
             document.getElementById('modal-txhash').innerText = txHash;
             document.getElementById('modal-block').innerText = block;
+            if (recordType) document.getElementById('modal-record-type').innerText = recordType;
+            if (dataHash) document.getElementById('modal-datahash').innerText = dataHash;
+            if (recorder) document.getElementById('modal-recorder').innerText = recorder;
             document.getElementById('modal-onchain').classList.remove('hidden');
         }
 
@@ -396,10 +599,6 @@
             const tip = document.getElementById('copy-tooltip');
             tip.classList.remove('hidden');
             setTimeout(() => tip.classList.add('hidden'), 2500);
-        }
-
-        function viewAudit(id) {
-            showOnChainModal('0xdbd803cf6eb0c2c3977fdcccd73f992e45e1c97e3ef876dfd1cb2a588cde93c5', 2);
         }
     </script>
 </body>
