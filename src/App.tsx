@@ -35,6 +35,9 @@ export default function App() {
   const [publicTreeModalTree, setPublicTreeModalTree] = useState<Tree | null>(null);
   const [incidentReportTreeId, setIncidentReportTreeId] = useState<string | undefined>(undefined);
 
+  // Sync trigger with Backend MySQL + Sepolia
+  const [, setSyncTick] = useState(0);
+
   // Notification / Toast
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -42,6 +45,24 @@ export default function App() {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3000);
   };
+
+  useEffect(() => {
+    const unsub = storage.subscribe(() => {
+      setSyncTick((t) => t + 1);
+      setCurrentUser(storage.getActiveUser());
+    });
+    storage.syncAll().then(() => {
+      const hash = window.location.hash;
+      if (hash && hash.startsWith('#tree-')) {
+        const publicCode = hash.replace('#tree-', '').trim();
+        const tree = storage.getTreeByPublicCode(publicCode);
+        if (tree) setPublicTreeModalTree(tree);
+      }
+    });
+    return () => {
+      unsub();
+    };
+  }, []);
 
   // Check URL hash for direct QR code scanning link (e.g. #tree-TREE-001)
   useEffect(() => {
@@ -67,13 +88,9 @@ export default function App() {
     showToast(`Đã chuyển vai trò: ${newUser.fullName} (${newUser.role})`);
   };
 
-  const handleResetSeed = () => {
-    if (window.confirm('Bạn có chắc muốn khôi phục dữ liệu mẫu ban đầu và reset Blockchain?')) {
-      storage.resetToDefaults();
-      showToast('Đã khôi phục dữ liệu mẫu ban đầu thành công!');
-      // re-render by toggling active user
-      setCurrentUser({ ...storage.getActiveUser() });
-    }
+  const handleResetSeed = async () => {
+    await storage.resetToDefaults();
+    showToast('Đã đồng bộ lại dữ liệu thực từ MySQL & Sepolia!');
   };
 
   const handleOpenCareModal = (treeId?: string) => {

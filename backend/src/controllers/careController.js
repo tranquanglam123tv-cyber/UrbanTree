@@ -79,6 +79,7 @@ exports.addCareRecord = (req, res) => {
     staff_id,
     caretaker_name,
     action_type,
+    service_cost,
     health_before,
     health_after,
     notes,
@@ -139,16 +140,24 @@ exports.addCareRecord = (req, res) => {
     const actualTreeId = tree.id;
     const actualCareCode = (care_code || `CARE-${Date.now().toString().slice(-4)}`).trim().toUpperCase();
     const actualActionDate = action_date || new Date().toISOString().replace('T', ' ').substring(0, 19);
+    const actualCost = Number(service_cost || 0);
+    const actualNotes = (notes || '').trim();
 
-    // 1. Tính toán mã băm SHA-256 chuẩn Master Spec cho CARE_LOG
-    const dataHash = hashService.hashCareLog({
+    // 1. Tạo snapshot + tính mã băm SHA-256 chuẩn cho CARE_LOG
+    const snapshot = hashService.buildAuditSnapshot('CARE_LOG', {
+      care_code: actualCareCode,
       tree_id: actualTreeId,
+      tree_code: tree.tree_code,
+      species: tree.species,
       caretaker_name: caretaker_name.trim(),
       action_type: action_type.trim(),
+      service_cost: actualCost,
+      notes: actualNotes,
       action_date: actualActionDate
     });
+    const dataHash = snapshot.hash;
 
-    // 2. Lưu bản ghi chăm sóc vào SQLite
+    // 2. Lưu bản ghi chăm sóc vào MySQL
     CareRecord.create(
       {
         care_code: actualCareCode,
@@ -156,9 +165,10 @@ exports.addCareRecord = (req, res) => {
         staff_id: staff_id || null,
         caretaker_name: caretaker_name.trim(),
         action_type: action_type.trim(),
+        service_cost: actualCost,
         health_before: health_before || tree.health_status || null,
         health_after: health_after || null,
-        notes: (notes || '').trim(),
+        notes: actualNotes,
         image_before_url: image_before_url || null,
         image_after_url: image_after_url || null,
         data_hash: dataHash,
@@ -174,7 +184,7 @@ exports.addCareRecord = (req, res) => {
           });
         }
 
-        // 3. Tự động neo bản ghi lên Blockchain (Nhiệm vụ 3 trong bàn giao)
+        // 3. Tự động neo bản ghi lên Blockchain
         let blockchainResult = null;
         try {
           const anchorResult = await blockchainClient.anchor(actualCareCode, 'CARE_LOG', dataHash);
@@ -190,11 +200,12 @@ exports.addCareRecord = (req, res) => {
           // Cập nhật trạng thái CONFIRMED vào bảng care_records
           CareRecord.updateAnchor(newRecord.id, dataHash, 'CONFIRMED', () => {});
 
-          // Lưu vết kiểm toán vào blockchain_audits
+          const deployment = blockchainClient.getDeploymentConfig();
+          // Lưu vết kiểm toán kèm payload_snapshot vào blockchain_audits
           db.run(
-            `INSERT INTO blockchain_audits (record_type, record_id, data_hash, tx_hash, block_number, recorder_address, status, confirmed_at)
-             VALUES (?, ?, ?, ?, ?, ?, 'CONFIRMED', CURRENT_TIMESTAMP)`,
-            ['CARE_LOG', actualCareCode, dataHash, anchorResult.txHash, anchorResult.blockNumber, anchorResult.recorder]
+            `INSERT INTO blockchain_audits (record_type, record_id, data_hash, payload_snapshot, tx_hash, block_number, chain_id, contract_address, recorder_address, status, confirmed_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'CONFIRMED', CURRENT_TIMESTAMP)`,
+            ['CARE_LOG', actualCareCode, dataHash, JSON.stringify(snapshot), anchorResult.txHash, anchorResult.blockNumber, deployment.chainId || 11155111, deployment.contractAddress, anchorResult.recorder]
           );
         } catch (bcErr) {
           blockchainResult = {
@@ -204,9 +215,9 @@ exports.addCareRecord = (req, res) => {
           };
 
           db.run(
-            `INSERT INTO blockchain_audits (record_type, record_id, data_hash, status, last_error)
-             VALUES (?, ?, ?, 'PENDING', ?)`,
-            ['CARE_LOG', actualCareCode, dataHash, bcErr.message]
+            `INSERT INTO blockchain_audits (record_type, record_id, data_hash, payload_snapshot, status, last_error)
+             VALUES (?, ?, ?, ?, 'PENDING', ?)`,
+            ['CARE_LOG', actualCareCode, dataHash, JSON.stringify(snapshot), bcErr.message]
           );
         }
 

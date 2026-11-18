@@ -63,6 +63,7 @@ export interface CareRecord {
   staffUserId: string;
   staffName?: string;
   actionType: CareActionType;
+  serviceCost?: number;
   healthBefore: TreeHealthStatus;
   healthAfter: TreeHealthStatus;
   notes: string;

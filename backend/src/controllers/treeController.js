@@ -165,16 +165,18 @@ exports.createTree = async (req, res) => {
       width: 400
     });
 
-    // 3. Tính toán mã băm SHA-256 chuẩn Master Spec v2 (Zero Mismatch)
+    // 3. Tạo snapshot + tính mã băm SHA-256 chuẩn Master Spec v2 (Zero Mismatch)
     const treeProfileData = {
       tree_code: actualCode,
       species: actualSpecies,
       location_name: actualLocation,
       latitude: actualLat,
       longitude: actualLng,
-      planted_date: actualPlantedDate
+      planted_date: actualPlantedDate,
+      health_status: health_status || 'Tốt'
     };
-    const dataHash = hashService.hashTreeProfile(treeProfileData);
+    const snapshot = hashService.buildAuditSnapshot('TREE_PROFILE', treeProfileData);
+    const dataHash = snapshot.hash;
 
     // 4. Lưu bản ghi cây xanh vào SQLite
     Tree.create(
@@ -217,11 +219,12 @@ exports.createTree = async (req, res) => {
             recorder: anchorResult.recorder
           };
 
-          // Lưu vết vào bảng kiểm toán blockchain_audits
+          const deployment = blockchainClient.getDeploymentConfig();
+          // Lưu vết kèm payload_snapshot vào bảng kiểm toán blockchain_audits
           db.run(
-            `INSERT INTO blockchain_audits (record_type, record_id, data_hash, tx_hash, block_number, recorder_address, status, confirmed_at)
-             VALUES (?, ?, ?, ?, ?, ?, 'CONFIRMED', CURRENT_TIMESTAMP)`,
-            ['TREE_PROFILE', actualCode, dataHash, anchorResult.txHash, anchorResult.blockNumber, anchorResult.recorder]
+            `INSERT INTO blockchain_audits (record_type, record_id, data_hash, payload_snapshot, tx_hash, block_number, chain_id, contract_address, recorder_address, status, confirmed_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'CONFIRMED', CURRENT_TIMESTAMP)`,
+            ['TREE_PROFILE', actualCode, dataHash, JSON.stringify(snapshot), anchorResult.txHash, anchorResult.blockNumber, deployment.chainId || 11155111, deployment.contractAddress, anchorResult.recorder]
           );
         } catch (bcErr) {
           // Xử lý mềm nếu Blockchain node chưa bật hoặc đã neo trước đó
@@ -232,9 +235,9 @@ exports.createTree = async (req, res) => {
           };
 
           db.run(
-            `INSERT INTO blockchain_audits (record_type, record_id, data_hash, status, last_error)
-             VALUES (?, ?, ?, 'PENDING', ?)`,
-            ['TREE_PROFILE', actualCode, dataHash, bcErr.message]
+            `INSERT INTO blockchain_audits (record_type, record_id, data_hash, payload_snapshot, status, last_error)
+             VALUES (?, ?, ?, ?, 'PENDING', ?)`,
+            ['TREE_PROFILE', actualCode, dataHash, JSON.stringify(snapshot), bcErr.message]
           );
         }
 

@@ -99,7 +99,7 @@ exports.getDashboardStats = async (req, res) => {
       SELECT 
         COUNT(*) AS total_cares,
         SUM(CASE 
-          WHEN strftime('%Y-%m', action_date) = strftime('%Y-%m', 'now') 
+          WHEN DATE_FORMAT(action_date, '%Y-%m') = DATE_FORMAT(NOW(), '%Y-%m') 
           THEN 1 ELSE 0 
         END) AS cares_this_month
       FROM care_records

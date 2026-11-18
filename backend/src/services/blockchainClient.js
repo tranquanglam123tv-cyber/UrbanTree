@@ -1,7 +1,7 @@
 const { ethers } = require('ethers'); // Thư viện Web3 Ethers.js phiên bản 6
 const fs = require('fs');
 const path = require('path');
-require('dotenv').config();
+require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
 
 /**
  * ============================================================================
@@ -10,22 +10,19 @@ require('dotenv').config();
  * Người thực hiện: Trần Quang Lâm (MSSV: 2311074) — Blockchain Lead
  * ============================================================================
  * 📌 VAI TRÒ CỦA FILE NÀY:
- * - Đóng vai trò là cầu nối giữa Backend Node.js với Mạng EVM Blockchain (Hardhat Node).
- * - Quản lý việc đọc ABI và Contract Address từ file `deployed-contract.json`.
+ * - Đóng vai trò là cầu nối giữa Backend Node.js với Mạng EVM Blockchain (Ethereum Sepolia Testnet).
+ * - Quản lý việc đọc ABI và Contract Address từ `.env` hoặc `deployed-contract.json` (deploy qua Remix IDE).
  * - Cung cấp 2 cơ chế:
  *   1. READ-ONLY qua Provider: Gọi các hàm 'view' (0 tốn gas, không cần private key).
  *   2. WRITE qua Signer: Ký số bằng Private Key để gửi transaction neo dữ liệu lên chuỗi.
  * ============================================================================
  */
 
-// Địa chỉ cổng mạng RPC của Node Hardhat chạy local (mặc định cổng 8545)
-const RPC_URL = process.env.BLOCKCHAIN_RPC_URL || 'http://127.0.0.1:8545';
+// RPC URL của mạng Sepolia Testnet (Alchemy / Infura)
+const RPC_URL = process.env.BLOCKCHAIN_RPC_URL;
 
-// Khóa bí mật (Private Key) của tài khoản ví #0 mà Hardhat tự tạo ra khi chạy `hardhat node`
-// Đây là ví mặc định có sẵn 10.000 ETH ảo để test, được gán làm Owner của Smart Contract
-const DEFAULT_PRIVATE_KEY =
-    process.env.DEPLOYER_PRIVATE_KEY ||
-    '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80';
+// Khóa bí mật (Private Key) của ví MetaMask dùng để ký giao dịch trên Sepolia
+const DEFAULT_PRIVATE_KEY = process.env.DEPLOYER_PRIVATE_KEY;
 
 // Khai báo giao diện ABI (Application Binary Interface) để Ethers.js biết các hàm của Smart Contract
 const ABI = [
@@ -40,27 +37,48 @@ const ABI = [
     'function getAllRecordIds() external view returns (string[] memory)'
 ];
 
-let cachedDeployment = null; // Biến cache cấu hình contract để tránh đọc file nhiều lần
-
-// Đọc địa chỉ hợp đồng thông minh đã deploy từ file deployed-contract.json
+// Đọc địa chỉ hợp đồng thông minh đã deploy (ưu tiên .env, fallback sang deployed-contract.json)
 function getDeploymentConfig() {
-    if (cachedDeployment) return cachedDeployment; // Nếu đã nạp rồi thì trả về luôn
+    const envAddress = (process.env.CONTRACT_ADDRESS || '').trim();
     const deploymentPath = path.resolve(__dirname, '../../deployed-contract.json');
-    if (!fs.existsSync(deploymentPath)) {
-        throw new Error(`blockchainClient: Không tìm thấy file ${deploymentPath}. Bạn cần chạy lệnh 'npm run chain:deploy' trước.`);
+
+    let fileData = {};
+    if (fs.existsSync(deploymentPath)) {
+        try {
+            fileData = JSON.parse(fs.readFileSync(deploymentPath, 'utf8'));
+        } catch (e) {
+            fileData = {};
+        }
     }
-    const raw = fs.readFileSync(deploymentPath, 'utf8');
-    cachedDeployment = JSON.parse(raw);
-    return cachedDeployment;
+
+    const contractAddress = envAddress || (fileData.contractAddress || '').trim();
+    if (!contractAddress || !ethers.isAddress(contractAddress)) {
+        throw new Error(
+            'Chưa có địa chỉ Smart Contract hợp lệ. Hãy deploy UrbanTreeRegistry.sol trên Remix IDE (Sepolia) rồi dán địa chỉ vào backend/.env (CONTRACT_ADDRESS=0x...) hoặc backend/deployed-contract.json.'
+        );
+    }
+
+    return {
+        network: process.env.BLOCKCHAIN_NETWORK || fileData.network || 'sepolia',
+        chainId: Number(process.env.BLOCKCHAIN_CHAIN_ID || fileData.chainId || 11155111),
+        contractAddress,
+        deployer: fileData.deployer || null
+    };
 }
 
 // 1. Tạo Provider: Kết nối đường truyền chỉ đọc (Read-only) tới Node Blockchain
 function getProvider() {
+    if (!RPC_URL) {
+        throw new Error('Thiếu BLOCKCHAIN_RPC_URL trong backend/.env');
+    }
     return new ethers.JsonRpcProvider(RPC_URL);
 }
 
 // 2. Tạo Signer: Đại diện cho chiếc ví có Private Key dùng để ký giao dịch (Write)
 function getSigner(provider = getProvider()) {
+    if (!DEFAULT_PRIVATE_KEY) {
+        throw new Error('Thiếu DEPLOYER_PRIVATE_KEY trong backend/.env');
+    }
     return new ethers.Wallet(DEFAULT_PRIVATE_KEY, provider);
 }
 
@@ -197,22 +215,38 @@ async function getAllRecords() {
 async function getNetworkStatus() {
     try {
         const provider = getProvider();
-        const blockNumber = await provider.getBlockNumber();    // Lấy số block mới nhất
+        const [network, blockNumber] = await Promise.all([
+            provider.getNetwork(),
+            provider.getBlockNumber(),
+        ]);
         const signer = getSigner(provider);
-        const balance = await provider.getBalance(signer.address); // Lấy số dư ví (ETH ảo)
-        const deployment = getDeploymentConfig();               // Lấy địa chỉ contract
+        const balance = await provider.getBalance(signer.address);
+
+        let contractAddress = null;
+        let contractReady = false;
+        let warning = null;
+        try {
+            const deployment = getDeploymentConfig();
+            contractAddress = deployment.contractAddress;
+            contractReady = true;
+        } catch (cfgErr) {
+            warning = cfgErr.message;
+        }
 
         return {
-            status: 'CONNECTED',                                // Báo kết nối thành công
+            status: contractReady ? 'CONNECTED' : 'PENDING_CONTRACT',
+            network: network.name || 'sepolia',
+            chainId: Number(network.chainId),
             rpcUrl: RPC_URL,
             blockNumber,
-            contractAddress: deployment.contractAddress,
+            contractAddress,
             deployerAddress: signer.address,
-            deployerBalanceEth: ethers.formatEther(balance)     // Đổi từ Wei sang ETH dễ đọc
+            deployerBalanceEth: ethers.formatEther(balance),
+            ...(warning ? { warning } : {}),
         };
     } catch (err) {
         return {
-            status: 'DISCONNECTED',                             // Báo mất kết nối nếu Node chưa bật
+            status: 'DISCONNECTED',
             rpcUrl: RPC_URL,
             error: err.message
         };

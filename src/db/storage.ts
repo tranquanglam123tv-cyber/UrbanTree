@@ -1,6 +1,6 @@
 /**
- * UrbanTree - Storage Engine & Database Service
- * Provides in-memory + LocalStorage persistence, seed data, and CRUD operations.
+ * UrbanTree - Storage Engine & API Client
+ * Connects React Frontend directly to Backend Express + MySQL (Aiven) + Sepolia Smart Contract.
  */
 
 import {
@@ -9,439 +9,177 @@ import {
   IncidentSeverity,
   IncidentStatus,
   IncidentUpdate,
-  RecordType,
-  Role,
   Tree,
   TreeHealthStatus,
   TreeType,
   User,
 } from '../types';
 import { blockchainService } from '../services/blockchainService';
-import { computeRecordHash } from '../services/hashService';
+import {
+  careActionToDb,
+  DbAuditRow,
+  healthToDb,
+  incidentStatusToDb,
+  mapCareFromDb,
+  mapIncidentFromDb,
+  mapIncidentUpdateFromDb,
+  mapTreeFromDb,
+  mapTreeTypeFromDb,
+  mapUserFromDb,
+  severityToDb,
+} from '../services/apiMapper';
 
-const USERS_STORAGE_KEY = 'urbantree_users';
-const TREE_TYPES_STORAGE_KEY = 'urbantree_tree_types';
-const TREES_STORAGE_KEY = 'urbantree_trees';
-const CARE_RECORDS_STORAGE_KEY = 'urbantree_care_records';
-const INCIDENTS_STORAGE_KEY = 'urbantree_incidents';
-const INCIDENT_UPDATES_STORAGE_KEY = 'urbantree_incident_updates';
 const ACTIVE_USER_KEY = 'urbantree_active_user';
 
-export const INITIAL_USERS: User[] = [
-  {
-    id: 'user-admin',
-    username: 'admin',
-    fullName: 'Đặng Thế Thuận',
-    role: 'ADMIN',
-    isActive: true,
-  },
-  {
-    id: 'user-staff-1',
-    username: 'staff_lam',
-    fullName: 'Trần Quang Lâm',
-    role: 'STAFF',
-    isActive: true,
-  },
-  {
-    id: 'user-staff-2',
-    username: 'staff_tuan',
-    fullName: 'Lê Tuấn Anh',
-    role: 'STAFF',
-    isActive: true,
-  },
-];
+const FALLBACK_USER: User = {
+  id: '1',
+  username: 'admin',
+  fullName: 'Đặng Thế Thuận (Admin)',
+  role: 'ADMIN',
+  isActive: true,
+};
 
-export const INITIAL_TREE_TYPES: TreeType[] = [
-  {
-    id: 'type-bang',
-    name: 'Bàng Đài Loan',
-    scientificName: 'Terminalia mantaly',
-    description: 'Cây thân gỗ nhỏ đến trung bình, tán lá xếp tầng ngang đẹp mắt, rễ cọc bám sâu ít gây nứt vỉa hè đô thị.',
-    careGuide: 'Cắt tỉa các cành sà thấp định kỳ 6 tháng/lần, kiểm tra sâu đục thân vào mùa mưa.',
-    isActive: true,
-  },
-  {
-    id: 'type-me',
-    name: 'Me Tây',
-    scientificName: 'Samanea saman',
-    description: 'Cây bóng mát đại mộc, tán hình dù rộng tới 30m, hoa hình chùm phớt hồng thơm dịu.',
-    careGuide: 'Khảo sát độ rỗng thân hằng năm, tỉa cành khô trước mùa mưa bão để tránh gãy đổ.',
-    isActive: true,
-  },
-  {
-    id: 'type-sao',
-    name: 'Sao Đen',
-    scientificName: 'Hopea odorata',
-    description: 'Cây đại mộc cao 30-40m, thân tròn thẳng tắp, vỏ nứt dọc màu nâu sẫm, biểu tượng cây xanh cổ thụ Sài Gòn.',
-    careGuide: 'Chống đỡ khi cây còn non, bón phân vi sinh định kỳ và bảo vệ vùng rễ quanh gốc cây.',
-    isActive: true,
-  },
-  {
-    id: 'type-gianghuong',
-    name: 'Giáng Hương',
-    scientificName: 'Pterocarpus macrocarpus',
-    description: 'Cây gỗ quý bản địa, hoa vàng óng ả thơm ngát, tán lá dày lọc bụi và giảm nhiệt cực tốt.',
-    careGuide: 'Tưới nước vừa phải, tưới ẩm gốc vào mùa khô, kiểm tra mối đất quanh gốc.',
-    isActive: true,
-  },
-  {
-    id: 'type-chuongvang',
-    name: 'Chuông Vàng',
-    scientificName: 'Tabebuia argentea',
-    description: 'Cây hoa cảnh quan đô thị, nở rộ hoa chuông vàng rực rỡ vào mùa xuân hè, tạo điểm nhấn cảnh quan.',
-    careGuide: 'Cắt tỉa cành vượt sau mỗi đợt hoa tàn, bón phân hữu cơ định kỳ.',
-    isActive: true,
-  },
-];
-
-export const INITIAL_TREES: Tree[] = [
-  {
-    id: 'tree-001',
-    publicCode: 'TREE-001',
-    treeTypeId: 'type-bang',
-    displayName: 'Cây Bàng Đài Loan #01',
-    address: 'Công viên Tao Đàn, Đường Trương Định, Phường Bến Thành, Quận 1',
-    latitude: 10.773829,
-    longitude: 106.691741,
-    plantedAt: '2021-03-15',
-    healthStatus: 'GOOD',
-    diameterCm: 28,
-    heightM: 7.5,
-    imageUrl: 'https://images.unsplash.com/photo-1542273917363-3b1817f69a2d?auto=format&fit=crop&w=800&q=80',
-    isActive: true,
-    createdAt: '2026-01-10T08:00:00.000Z',
-    updatedAt: '2026-11-01T04:30:00.000Z',
-  },
-  {
-    id: 'tree-002',
-    publicCode: 'TREE-002',
-    treeTypeId: 'type-me',
-    displayName: 'Cây Me Tây Cổ Thụ #02',
-    address: 'Đại lộ Lê Duẩn, Đối diện Dinh Độc Lập, Phường Bến Nghé, Quận 1',
-    latitude: 10.778215,
-    longitude: 106.69612,
-    plantedAt: '2012-06-20',
-    healthStatus: 'FAIR',
-    diameterCm: 72,
-    heightM: 16.0,
-    imageUrl: 'https://images.unsplash.com/photo-1513836279014-a89f7a76ae86?auto=format&fit=crop&w=800&q=80',
-    isActive: true,
-    createdAt: '2026-01-10T08:00:00.000Z',
-    updatedAt: '2026-11-01T04:30:00.000Z',
-  },
-  {
-    id: 'tree-003',
-    publicCode: 'TREE-003',
-    treeTypeId: 'type-sao',
-    displayName: 'Cây Sao Đen Đại Mộc #03',
-    address: 'Góc đường Pasteur - Nguyễn Đình Chiểu, Phường Võ Thị Sáu, Quận 3',
-    latitude: 10.78451,
-    longitude: 106.68915,
-    plantedAt: '2008-04-10',
-    healthStatus: 'POOR',
-    diameterCm: 85,
-    heightM: 22.0,
-    imageUrl: 'https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=800&q=80',
-    isActive: true,
-    createdAt: '2026-01-10T08:00:00.000Z',
-    updatedAt: '2026-11-01T04:30:00.000Z',
-  },
-  {
-    id: 'tree-004',
-    publicCode: 'TREE-004',
-    treeTypeId: 'type-gianghuong',
-    displayName: 'Cây Giáng Hương Tuyến Phố #04',
-    address: 'Công viên Bến Bạch Đằng, Đường Tôn Đức Thắng, Phường Bến Nghé, Quận 1',
-    latitude: 10.77192,
-    longitude: 106.70543,
-    plantedAt: '2022-09-02',
-    healthStatus: 'GOOD',
-    diameterCm: 32,
-    heightM: 8.2,
-    imageUrl: 'https://images.unsplash.com/photo-1502082553048-f009c37129b9?auto=format&fit=crop&w=800&q=80',
-    isActive: true,
-    createdAt: '2026-01-10T08:00:00.000Z',
-    updatedAt: '2026-11-01T04:30:00.000Z',
-  },
-  {
-    id: 'tree-005',
-    publicCode: 'TREE-005',
-    treeTypeId: 'type-chuongvang',
-    displayName: 'Cây Chuông Vàng Cảnh Quan #05',
-    address: 'Phố đi bộ Nguyễn Huệ, Phường Bến Nghé, Quận 1',
-    latitude: 10.7745,
-    longitude: 106.7032,
-    plantedAt: '2023-01-18',
-    healthStatus: 'GOOD',
-    diameterCm: 22,
-    heightM: 5.5,
-    imageUrl: 'https://images.unsplash.com/photo-1518531933037-91b2f5f229cc?auto=format&fit=crop&w=800&q=80',
-    isActive: true,
-    createdAt: '2026-01-10T08:00:00.000Z',
-    updatedAt: '2026-11-01T04:30:00.000Z',
-  },
-  {
-    id: 'tree-006',
-    publicCode: 'TREE-006',
-    treeTypeId: 'type-me',
-    displayName: 'Cây Me Tây Góc Phố #06',
-    address: 'Quảng trường Nhà hát Thành phố, Phường Bến Nghé, Quận 1',
-    latitude: 10.77685,
-    longitude: 106.70312,
-    plantedAt: '2015-11-20',
-    healthStatus: 'CRITICAL',
-    diameterCm: 64,
-    heightM: 14.2,
-    imageUrl: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=800&q=80',
-    isActive: true,
-    createdAt: '2026-01-10T08:00:00.000Z',
-    updatedAt: '2026-11-01T04:30:00.000Z',
-  },
-];
-
-export const INITIAL_CARE_RECORDS: CareRecord[] = [
-  {
-    id: 'care-001',
-    treeId: 'tree-001',
-    staffUserId: 'user-staff-1',
-    staffName: 'Trần Quang Lâm',
-    actionType: 'PRUNING',
-    healthBefore: 'FAIR',
-    healthAfter: 'GOOD',
-    notes: 'Đã cắt tỉa cành khô, tạo thông thoáng tán lá trước mùa mưa bão.',
-    performedAt: '2026-10-15T08:30:00.000Z',
-    createdAt: '2026-10-15T08:30:00.000Z',
-  },
-  {
-    id: 'care-002',
-    treeId: 'tree-002',
-    staffUserId: 'user-staff-2',
-    staffName: 'Lê Tuấn Anh',
-    actionType: 'PEST_CONTROL',
-    healthBefore: 'POOR',
-    healthAfter: 'FAIR',
-    notes: 'Xử lý mối đất và sâu đục thân bằng chế phẩm sinh học an toàn đô thị.',
-    performedAt: '2026-10-22T09:15:00.000Z',
-    createdAt: '2026-10-22T09:15:00.000Z',
-  },
-  {
-    id: 'care-003',
-    treeId: 'tree-004',
-    staffUserId: 'user-staff-1',
-    staffName: 'Trần Quang Lâm',
-    actionType: 'FERTILIZING',
-    healthBefore: 'GOOD',
-    healthAfter: 'GOOD',
-    notes: 'Bón phân hữu cơ vi sinh cung cấp dinh dưỡng kích rễ vùng ven sông.',
-    performedAt: '2026-10-28T07:45:00.000Z',
-    createdAt: '2026-10-28T07:45:00.000Z',
-  },
-];
-
-export const INITIAL_INCIDENTS: Incident[] = [
-  {
-    id: 'inc-001',
-    publicCode: 'INC-84920',
-    treeId: 'tree-003',
-    reporterName: 'Nguyễn Văn An',
-    reporterPhone: '0903847291',
-    description: 'Cành cây lớn phía trên vỉa hè có vết nứt dài và lá héo khô, nguy cơ gãy đổ trúng người đi bộ.',
-    latitude: 10.78451,
-    longitude: 106.68915,
-    address: 'Góc đường Pasteur - Nguyễn Đình Chiểu, Q.3',
-    severity: 'HIGH',
-    status: 'IN_PROGRESS',
-    assignedToUserId: 'user-staff-2',
-    assignedToName: 'Lê Tuấn Anh',
-    reportedAt: '2026-11-02T03:20:00.000Z',
-    createdAt: '2026-11-02T03:20:00.000Z',
-    updatedAt: '2026-11-03T02:00:00.000Z',
-  },
-  {
-    id: 'inc-002',
-    publicCode: 'INC-71044',
-    treeId: 'tree-006',
-    reporterName: 'Trần Thị Mai',
-    reporterPhone: '0918234910',
-    description: 'Sau đợt mưa dông chiều qua, cây có hiện tượng nghiêng khoảng 15 độ về phía đường đi, gốc trồi rễ.',
-    latitude: 10.77685,
-    longitude: 106.70312,
-    address: 'Quảng trường Nhà hát Thành phố, Q.1',
-    severity: 'CRITICAL',
-    status: 'RECEIVED',
-    assignedToUserId: null,
-    reportedAt: '2026-11-04T10:15:00.000Z',
-    createdAt: '2026-11-04T10:15:00.000Z',
-    updatedAt: '2026-11-04T10:15:00.000Z',
-  },
-  {
-    id: 'inc-003',
-    publicCode: 'INC-53219',
-    treeId: 'tree-001',
-    reporterName: 'Hoàng Minh Đức',
-    reporterPhone: '0983112233',
-    description: 'Phát hiện tổ mối đất lớn bám quanh vỏ gốc cây bàng gần lối đi thể dục công viên.',
-    latitude: 10.773829,
-    longitude: 106.691741,
-    address: 'Công viên Tao Đàn, Q.1',
-    severity: 'MEDIUM',
-    status: 'RESOLVED',
-    assignedToUserId: 'user-staff-1',
-    assignedToName: 'Trần Quang Lâm',
-    reportedAt: '2026-10-18T04:10:00.000Z',
-    resolvedAt: '2026-10-19T09:00:00.000Z',
-    createdAt: '2026-10-18T04:10:00.000Z',
-    updatedAt: '2026-10-19T09:00:00.000Z',
-  },
-];
-
-export const INITIAL_INCIDENT_UPDATES: IncidentUpdate[] = [
-  {
-    id: 'upd-001',
-    incidentId: 'inc-001',
-    actorUserId: 'user-admin',
-    actorName: 'Đặng Thế Thuận (Admin)',
-    oldStatus: 'RECEIVED',
-    newStatus: 'ASSIGNED',
-    note: 'Đã tiếp nhận phản ánh và phân công nhân viên kỹ thuật kiểm tra hiện trường.',
-    createdAt: '2026-11-02T04:00:00.000Z',
-  },
-  {
-    id: 'upd-002',
-    incidentId: 'inc-001',
-    actorUserId: 'user-staff-2',
-    actorName: 'Lê Tuấn Anh (Staff)',
-    oldStatus: 'ASSIGNED',
-    newStatus: 'IN_PROGRESS',
-    note: 'Đã khảo sát thực địa, chuẩn bị xe thang nâng để cắt tỉa cành nguy hiểm trong buổi sáng.',
-    createdAt: '2026-11-03T02:00:00.000Z',
-  },
-  {
-    id: 'upd-003',
-    incidentId: 'inc-003',
-    actorUserId: 'user-admin',
-    actorName: 'Đặng Thế Thuận (Admin)',
-    oldStatus: 'RECEIVED',
-    newStatus: 'ASSIGNED',
-    note: 'Chuyển thông tin cho nhân viên Lâm xử lý tổ mối.',
-    createdAt: '2026-10-18T05:00:00.000Z',
-  },
-  {
-    id: 'upd-004',
-    incidentId: 'inc-003',
-    actorUserId: 'user-staff-1',
-    actorName: 'Trần Quang Lâm (Staff)',
-    oldStatus: 'ASSIGNED',
-    newStatus: 'RESOLVED',
-    note: 'Đã cạo sạch tổ mối, phun khử trùng và quét vôi bảo vệ gốc cây an toàn.',
-    createdAt: '2026-10-19T09:00:00.000Z',
-  },
-];
+type Listener = () => void;
 
 class StorageService {
-  private users: User[] = [];
+  private users: User[] = [FALLBACK_USER];
   private treeTypes: TreeType[] = [];
   private trees: Tree[] = [];
   private careRecords: CareRecord[] = [];
   private incidents: Incident[] = [];
   private incidentUpdates: IncidentUpdate[] = [];
-  private activeUser: User = INITIAL_USERS[0]; // Admin by default
+  private activeUser: User = FALLBACK_USER;
+  private listeners: Set<Listener> = new Set();
+  private syncedOnce: boolean = false;
+  private loading: boolean = false;
+  private syncError: string | null = null;
+  private tamperBackups: Map<string, { displayName: string; healthStatus: TreeHealthStatus }> = new Map();
 
   constructor() {
-    this.init();
+    if (this.isBrowser()) {
+      try {
+        const stored = localStorage.getItem(ACTIVE_USER_KEY);
+        if (stored) {
+          this.activeUser = JSON.parse(stored);
+        }
+      } catch {
+        this.activeUser = FALLBACK_USER;
+      }
+    }
   }
 
   private isBrowser(): boolean {
-    return typeof window !== 'undefined' && typeof window.localStorage !== 'undefined';
+    return typeof window !== 'undefined';
   }
 
-  public init() {
-    if (!this.isBrowser()) {
-      this.resetToDefaults();
-      return;
-    }
-
-    try {
-      const storedTrees = localStorage.getItem(TREES_STORAGE_KEY);
-      if (storedTrees) {
-        this.trees = JSON.parse(storedTrees);
-        this.users = JSON.parse(localStorage.getItem(USERS_STORAGE_KEY) || JSON.stringify(INITIAL_USERS));
-        this.treeTypes = JSON.parse(localStorage.getItem(TREE_TYPES_STORAGE_KEY) || JSON.stringify(INITIAL_TREE_TYPES));
-        this.careRecords = JSON.parse(localStorage.getItem(CARE_RECORDS_STORAGE_KEY) || JSON.stringify(INITIAL_CARE_RECORDS));
-        this.incidents = JSON.parse(localStorage.getItem(INCIDENTS_STORAGE_KEY) || JSON.stringify(INITIAL_INCIDENTS));
-        this.incidentUpdates = JSON.parse(localStorage.getItem(INCIDENT_UPDATES_STORAGE_KEY) || JSON.stringify(INITIAL_INCIDENT_UPDATES));
-
-        const storedActiveUser = localStorage.getItem(ACTIVE_USER_KEY);
-        if (storedActiveUser) {
-          this.activeUser = JSON.parse(storedActiveUser);
-        }
-      } else {
-        this.resetToDefaults();
-      }
-    } catch {
-      this.resetToDefaults();
-    }
+  public subscribe(listener: Listener): () => void {
+    this.listeners.add(listener);
+    return () => this.listeners.delete(listener);
   }
 
-  public resetToDefaults() {
-    this.users = [...INITIAL_USERS];
-    this.treeTypes = [...INITIAL_TREE_TYPES];
-    this.trees = [...INITIAL_TREES];
-    this.careRecords = [...INITIAL_CARE_RECORDS];
-    this.incidents = [...INITIAL_INCIDENTS];
-    this.incidentUpdates = [...INITIAL_INCIDENT_UPDATES];
-    this.activeUser = INITIAL_USERS[0];
-
-    // Anchor baseline demo records so they are immediately valid in blockchain
-    blockchainService.clearLedger();
-
-    // Auto-anchor initial trees and care records
-    for (const tree of this.trees) {
-      const { hash, canonicalJson } = computeRecordHash('TREE_PROFILE', tree);
-      blockchainService.anchorRecord({
-        recordType: 'TREE_PROFILE',
-        recordId: tree.id,
-        hash,
-        canonicalJson,
-      }).then((receipt) => {
-        tree.payloadVersion = 1;
-        tree.payloadHash = hash;
-        tree.anchorStatus = receipt.status;
-        tree.txHash = receipt.txHash;
-      });
-    }
-
-    for (const care of this.careRecords) {
-      const { hash, canonicalJson } = computeRecordHash('CARE_RECORD', care);
-      blockchainService.anchorRecord({
-        recordType: 'CARE_RECORD',
-        recordId: care.id,
-        hash,
-        canonicalJson,
-      }).then((receipt) => {
-        care.payloadVersion = 1;
-        care.payloadHash = hash;
-        care.anchorStatus = receipt.status;
-        care.txHash = receipt.txHash;
-      });
-    }
-
-    this.saveAll();
+  private notify() {
+    this.listeners.forEach((fn) => fn());
   }
 
-  private saveAll() {
+  public isSynced(): boolean {
+    return this.syncedOnce;
+  }
+
+  public isLoading(): boolean {
+    return this.loading;
+  }
+
+  public getSyncError(): string | null {
+    return this.syncError;
+  }
+
+  /**
+   * Fetches all live data from MySQL + Sepolia via Backend API (/api/*).
+   */
+  public async syncAll(): Promise<void> {
     if (!this.isBrowser()) return;
+    this.loading = true;
+    this.syncError = null;
+    this.notify();
+
     try {
-      localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(this.users));
-      localStorage.setItem(TREE_TYPES_STORAGE_KEY, JSON.stringify(this.treeTypes));
-      localStorage.setItem(TREES_STORAGE_KEY, JSON.stringify(this.trees));
-      localStorage.setItem(CARE_RECORDS_STORAGE_KEY, JSON.stringify(this.careRecords));
-      localStorage.setItem(INCIDENTS_STORAGE_KEY, JSON.stringify(this.incidents));
-      localStorage.setItem(INCIDENT_UPDATES_STORAGE_KEY, JSON.stringify(this.incidentUpdates));
-      localStorage.setItem(ACTIVE_USER_KEY, JSON.stringify(this.activeUser));
-    } catch (err) {
-      console.error('Storage save error:', err);
+      await blockchainService.syncFromBackend();
+      const audits: DbAuditRow[] = blockchainService.getAudits();
+
+      const [usersRes, typesRes, treesRes, careRes, incRes, updRes] = await Promise.all([
+        fetch('/api/users').then((r) => r.json()),
+        fetch('/api/tree-types').then((r) => r.json()),
+        fetch('/api/trees?limit=100').then((r) => r.json()),
+        fetch('/api/care-records?limit=100').then((r) => r.json()),
+        fetch('/api/incidents?limit=100').then((r) => r.json()),
+        fetch('/api/incident-updates').then((r) => r.json()),
+      ]);
+
+      if (Array.isArray(usersRes?.data)) {
+        this.users = usersRes.data.map(mapUserFromDb);
+        // Ensure activeUser ID matches MySQL user ID if not CITIZEN
+        if (this.activeUser.role !== 'CITIZEN') {
+          const matched =
+            this.users.find((u) => u.username === this.activeUser.username) ||
+            this.users.find((u) => u.role === this.activeUser.role) ||
+            this.users[0];
+          if (matched) {
+            this.activeUser = matched;
+            localStorage.setItem(ACTIVE_USER_KEY, JSON.stringify(matched));
+          }
+        }
+      }
+
+      if (Array.isArray(typesRes?.data)) {
+        this.treeTypes = typesRes.data.map(mapTreeTypeFromDb);
+      }
+
+      if (Array.isArray(treesRes?.data)) {
+        this.trees = treesRes.data.map((row: any) => mapTreeFromDb(row, audits));
+      }
+
+      if (Array.isArray(careRes?.data)) {
+        this.careRecords = careRes.data.map((row: any) => mapCareFromDb(row, audits));
+      }
+
+      if (Array.isArray(incRes?.data)) {
+        this.incidents = incRes.data.map((row: any) => {
+          const mapped = mapIncidentFromDb(row, audits);
+          if (mapped.assignedToUserId) {
+            const staff = this.users.find((u) => u.id === mapped.assignedToUserId);
+            if (staff) mapped.assignedToName = staff.fullName;
+          }
+          return mapped;
+        });
+      }
+
+      if (Array.isArray(updRes?.data)) {
+        this.incidentUpdates = updRes.data.map(mapIncidentUpdateFromDb);
+      }
+
+      this.syncedOnce = true;
+    } catch (err: any) {
+      this.syncError = err?.message || 'Không thể kết nối Backend API (http://localhost:5001)';
+    } finally {
+      this.loading = false;
+      this.notify();
     }
+  }
+
+  public async resetToDefaults(): Promise<void> {
+    // Restore any locally tampered trees first, then re-sync from MySQL + Sepolia
+    for (const [treeId, orig] of this.tamperBackups.entries()) {
+      await fetch(`/api/trees/${treeId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          species: orig.displayName,
+          health_status: healthToDb(orig.healthStatus),
+        }),
+      }).catch(() => null);
+    }
+    this.tamperBackups.clear();
+    await this.syncAll();
   }
 
   // Active User / Persona
@@ -454,6 +192,7 @@ class StorageService {
     if (this.isBrowser()) {
       localStorage.setItem(ACTIVE_USER_KEY, JSON.stringify(user));
     }
+    this.notify();
   }
 
   public getUsers(): User[] {
@@ -484,81 +223,101 @@ class StorageService {
   }
 
   public async createTree(data: Omit<Tree, 'id' | 'createdAt' | 'updatedAt'>): Promise<Tree> {
-    const id = `tree-${Date.now()}`;
-    const now = new Date().toISOString();
-    const newTree: Tree = {
-      ...data,
-      id,
-      createdAt: now,
-      updatedAt: now,
-    };
-
-    // Automatically compute hash and anchor
-    const { hash, canonicalJson } = computeRecordHash('TREE_PROFILE', newTree);
-    const receipt = await blockchainService.anchorRecord({
-      recordType: 'TREE_PROFILE',
-      recordId: id,
-      hash,
-      canonicalJson,
+    const res = await fetch('/api/trees', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        tree_code: data.publicCode,
+        tree_type_id: Number(data.treeTypeId) || 1,
+        species: data.displayName,
+        location_name: data.address,
+        address: data.address,
+        latitude: Number(data.latitude),
+        longitude: Number(data.longitude),
+        planted_date: data.plantedAt,
+        height_meter: data.heightM ?? null,
+        diameter_cm: data.diameterCm ?? null,
+        health_status: healthToDb(data.healthStatus),
+        image_url: data.imageUrl || null,
+      }),
     });
+    const json = await res.json();
+    if (!res.ok || !json.success) {
+      throw new Error(json.message || 'Lỗi tạo cây xanh trên server');
+    }
 
-    newTree.payloadVersion = 1;
-    newTree.payloadHash = hash;
-    newTree.anchorStatus = receipt.status;
-    newTree.txHash = receipt.txHash;
-
-    this.trees.unshift(newTree);
-    this.saveAll();
-    return newTree;
+    await this.syncAll();
+    const created = this.getTreeByPublicCode(data.publicCode) || this.trees[0];
+    return created;
   }
 
   public async updateTree(id: string, updates: Partial<Tree>): Promise<Tree> {
-    const index = this.trees.findIndex((t) => t.id === id);
-    if (index === -1) throw new Error(`Tree ${id} not found`);
+    const body: Record<string, unknown> = {};
+    if (updates.displayName !== undefined) body.species = updates.displayName;
+    if (updates.treeTypeId !== undefined) body.tree_type_id = Number(updates.treeTypeId) || null;
+    if (updates.address !== undefined) {
+      body.address = updates.address;
+      body.location_name = updates.address;
+    }
+    if (updates.latitude !== undefined) body.latitude = Number(updates.latitude);
+    if (updates.longitude !== undefined) body.longitude = Number(updates.longitude);
+    if (updates.plantedAt !== undefined) body.planted_date = updates.plantedAt;
+    if (updates.heightM !== undefined) body.height_meter = updates.heightM;
+    if (updates.diameterCm !== undefined) body.diameter_cm = updates.diameterCm;
+    if (updates.healthStatus !== undefined) body.health_status = healthToDb(updates.healthStatus);
+    if (updates.imageUrl !== undefined) body.image_url = updates.imageUrl;
 
-    const now = new Date().toISOString();
-    const updatedTree: Tree = {
-      ...this.trees[index],
-      ...updates,
-      id,
-      updatedAt: now,
-    };
-
-    // Re-anchor updated tree
-    const { hash, canonicalJson } = computeRecordHash('TREE_PROFILE', updatedTree);
-    const receipt = await blockchainService.anchorRecord({
-      recordType: 'TREE_PROFILE',
-      recordId: id,
-      hash,
-      canonicalJson,
+    const res = await fetch(`/api/trees/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
     });
+    const json = await res.json();
+    if (!res.ok || !json.success) {
+      throw new Error(json.message || 'Lỗi cập nhật cây xanh');
+    }
 
-    updatedTree.payloadVersion = 1;
-    updatedTree.payloadHash = hash;
-    updatedTree.anchorStatus = receipt.status;
-    updatedTree.txHash = receipt.txHash;
-
-    this.trees[index] = updatedTree;
-    this.saveAll();
-    return updatedTree;
+    await this.syncAll();
+    const updated = this.getTreeById(id);
+    if (!updated) throw new Error(`Tree ${id} not found`);
+    return updated;
   }
 
   /**
    * Tamper Simulation Tool:
-   * Maliciously alters a tree record's health status or notes in the database WITHOUT re-anchoring to blockchain.
-   * This is required by Section 10 & 5.1 of the roadmap to demonstrate cryptographic tamper detection.
+   * Modifies the tree's species & health_status in MySQL WITHOUT touching the Sepolia Smart Contract
+   * so live cryptographic verification immediately detects HASH MISMATCH.
    */
-  public tamperTree(id: string, tamperedHealthStatus: TreeHealthStatus): Tree {
-    const index = this.trees.findIndex((t) => t.id === id);
-    if (index === -1) throw new Error('Tree not found');
+  public async tamperTree(id: string, tamperedHealthStatus: TreeHealthStatus): Promise<Tree> {
+    const existing = this.getTreeById(id);
+    if (!existing) throw new Error('Tree not found');
 
-    this.trees[index] = {
-      ...this.trees[index],
-      healthStatus: tamperedHealthStatus,
-      // intentionally do NOT update payloadHash or anchor!
-    };
-    this.saveAll();
-    return this.trees[index];
+    if (!this.tamperBackups.has(id)) {
+      this.tamperBackups.set(id, {
+        displayName: existing.displayName,
+        healthStatus: existing.healthStatus,
+      });
+    }
+
+    const tamperedName = existing.displayName.includes('[ĐÃ BỊ SỬA LÉN]')
+      ? existing.displayName
+      : `${existing.displayName} [ĐÃ BỊ SỬA LÉN]`;
+
+    const res = await fetch(`/api/trees/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        species: tamperedName,
+        health_status: healthToDb(tamperedHealthStatus),
+      }),
+    });
+    const json = await res.json();
+    if (!res.ok || !json.success) {
+      throw new Error(json.message || 'Lỗi giả lập sửa dữ liệu MySQL');
+    }
+
+    await this.syncAll();
+    return this.getTreeById(id)!;
   }
 
   // Care Records
@@ -570,41 +329,28 @@ class StorageService {
   }
 
   public async createCareRecord(data: Omit<CareRecord, 'id' | 'createdAt'>): Promise<CareRecord> {
-    const id = `care-${Date.now()}`;
-    const now = new Date().toISOString();
-
-    const newCare: CareRecord = {
-      ...data,
-      id,
-      createdAt: now,
-    };
-
-    // Update tree health status if care changed it
-    if (newCare.healthAfter) {
-      const treeIdx = this.trees.findIndex((t) => t.id === newCare.treeId);
-      if (treeIdx !== -1) {
-        this.trees[treeIdx].healthStatus = newCare.healthAfter;
-        this.trees[treeIdx].updatedAt = now;
-      }
+    const staffNumericId = Number.isInteger(Number(data.staffUserId)) ? Number(data.staffUserId) : null;
+    const res = await fetch('/api/care-records', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        tree_id: Number(data.treeId),
+        staff_id: staffNumericId,
+        caretaker_name: data.staffName || this.activeUser.fullName,
+        action_type: careActionToDb(data.actionType),
+        health_before: healthToDb(data.healthBefore),
+        health_after: healthToDb(data.healthAfter),
+        notes: data.notes,
+        image_after_url: data.imageUrl || null,
+      }),
+    });
+    const json = await res.json();
+    if (!res.ok || !json.success) {
+      throw new Error(json.message || 'Lỗi lưu nhật ký chăm sóc');
     }
 
-    // Anchor to blockchain
-    const { hash, canonicalJson } = computeRecordHash('CARE_RECORD', newCare);
-    const receipt = await blockchainService.anchorRecord({
-      recordType: 'CARE_RECORD',
-      recordId: id,
-      hash,
-      canonicalJson,
-    });
-
-    newCare.payloadVersion = 1;
-    newCare.payloadHash = hash;
-    newCare.anchorStatus = receipt.status;
-    newCare.txHash = receipt.txHash;
-
-    this.careRecords.unshift(newCare);
-    this.saveAll();
-    return newCare;
+    await this.syncAll();
+    return this.careRecords[0];
   }
 
   // Incidents
@@ -632,60 +378,29 @@ class StorageService {
     severity?: IncidentSeverity;
     imageUrl?: string;
   }): Promise<Incident> {
-    const randomSuffix = Math.floor(10000 + Math.random() * 90000);
-    const publicCode = `INC-${randomSuffix}`;
-    const id = `inc-${Date.now()}`;
-    const now = new Date().toISOString();
-
-    const newIncident: Incident = {
-      id,
-      publicCode,
-      treeId: data.treeId || null,
-      reporterName: data.reporterName || 'Người dân ẩn danh',
-      reporterPhone: data.reporterPhone || '',
-      description: data.description,
-      latitude: data.latitude,
-      longitude: data.longitude,
-      address: data.address || '',
-      severity: data.severity || 'MEDIUM',
-      status: 'RECEIVED',
-      assignedToUserId: null,
-      imageUrl: data.imageUrl,
-      reportedAt: now,
-      createdAt: now,
-      updatedAt: now,
-    };
-
-    // Anchor incident report to blockchain
-    const { hash, canonicalJson } = computeRecordHash('INCIDENT_REPORT', newIncident);
-    const receipt = await blockchainService.anchorRecord({
-      recordType: 'INCIDENT_REPORT',
-      recordId: id,
-      hash,
-      canonicalJson,
+    const res = await fetch('/api/incidents', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        tree_id: data.treeId ? Number(data.treeId) : null,
+        reporter_name: data.reporterName || 'Người dân ẩn danh',
+        reporter_phone: data.reporterPhone || '0900000000',
+        description: data.description,
+        address: data.address || '',
+        latitude: data.latitude,
+        longitude: data.longitude,
+        severity: severityToDb(data.severity),
+        image_url: data.imageUrl || '',
+      }),
     });
+    const json = await res.json();
+    if (!res.ok || !json.success) {
+      throw new Error(json.message || 'Lỗi gửi phản ánh sự cố');
+    }
 
-    newIncident.payloadVersion = 1;
-    newIncident.payloadHash = hash;
-    newIncident.anchorStatus = receipt.status;
-    newIncident.txHash = receipt.txHash;
-
-    this.incidents.unshift(newIncident);
-
-    // Initial timeline record
-    this.incidentUpdates.unshift({
-      id: `upd-${Date.now()}`,
-      incidentId: id,
-      actorUserId: 'citizen',
-      actorName: 'Hệ thống tiếp nhận người dân',
-      oldStatus: 'RECEIVED',
-      newStatus: 'RECEIVED',
-      note: 'Phản ánh được ghi nhận thành công từ cổng công cộng.',
-      createdAt: now,
-    });
-
-    this.saveAll();
-    return newIncident;
+    await this.syncAll();
+    const created = this.getIncidentById(String(json.incident_id)) || this.incidents[0];
+    return created;
   }
 
   public async updateIncidentStatus(params: {
@@ -696,62 +411,31 @@ class StorageService {
     note: string;
     assignedToUserId?: string | null;
   }): Promise<Incident> {
-    const { incidentId, newStatus, actorUserId, actorName, note, assignedToUserId } = params;
-    const index = this.incidents.findIndex((i) => i.id === incidentId);
-    if (index === -1) throw new Error('Incident not found');
+    const actorNumericId = Number.isInteger(Number(params.actorUserId)) ? Number(params.actorUserId) : null;
+    const assignedNumericId =
+      params.assignedToUserId && Number.isInteger(Number(params.assignedToUserId))
+        ? Number(params.assignedToUserId)
+        : null;
 
-    const incident = this.incidents[index];
-    const oldStatus = incident.status;
-    const now = new Date().toISOString();
-
-    incident.status = newStatus;
-    incident.updatedAt = now;
-
-    if (assignedToUserId !== undefined) {
-      incident.assignedToUserId = assignedToUserId;
-      if (assignedToUserId) {
-        const staff = this.users.find((u) => u.id === assignedToUserId);
-        incident.assignedToName = staff?.fullName || 'Nhân viên';
-      } else {
-        incident.assignedToName = undefined;
-      }
-    }
-
-    if (newStatus === 'RESOLVED') {
-      incident.resolvedAt = now;
-
-      // Anchor RESOLUTION to blockchain
-      const { hash, canonicalJson } = computeRecordHash('INCIDENT_RESOLUTION', incident, {
-        resolvedBy: actorUserId,
-        note,
-      });
-
-      const receipt = await blockchainService.anchorRecord({
-        recordType: 'INCIDENT_RESOLUTION',
-        recordId: incident.id,
-        hash,
-        canonicalJson,
-      });
-
-      incident.payloadHash = hash;
-      incident.anchorStatus = receipt.status;
-      incident.txHash = receipt.txHash;
-    }
-
-    // Append to immutable timeline
-    this.incidentUpdates.unshift({
-      id: `upd-${Date.now()}`,
-      incidentId,
-      actorUserId,
-      actorName,
-      oldStatus,
-      newStatus,
-      note,
-      createdAt: now,
+    const res = await fetch(`/api/incidents/${params.incidentId}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        status: incidentStatusToDb(params.newStatus),
+        assigned_staff_id: assignedNumericId,
+        actor_id: actorNumericId,
+        note: params.note,
+      }),
     });
+    const json = await res.json();
+    if (!res.ok || !json.success) {
+      throw new Error(json.message || 'Lỗi cập nhật trạng thái sự cố');
+    }
 
-    this.saveAll();
-    return incident;
+    await this.syncAll();
+    const updated = this.getIncidentById(params.incidentId);
+    if (!updated) throw new Error('Incident not found after update');
+    return updated;
   }
 
   public getIncidentUpdates(incidentId: string): IncidentUpdate[] {
@@ -765,7 +449,9 @@ class StorageService {
     const totalTrees = this.trees.length;
     const healthyTrees = this.trees.filter((t) => t.healthStatus === 'GOOD').length;
     const atRiskTrees = this.trees.filter((t) => ['POOR', 'CRITICAL'].includes(t.healthStatus)).length;
-    const activeIncidents = this.incidents.filter((i) => ['RECEIVED', 'ASSIGNED', 'IN_PROGRESS'].includes(i.status)).length;
+    const activeIncidents = this.incidents.filter((i) =>
+      ['RECEIVED', 'ASSIGNED', 'IN_PROGRESS'].includes(i.status)
+    ).length;
     const totalCareRecords = this.careRecords.length;
     const totalAnchors = blockchainService.getAllAnchors().length;
 

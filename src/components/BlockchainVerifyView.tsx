@@ -28,11 +28,22 @@ export const BlockchainVerifyView: React.FC = () => {
   const [copiedHash, setCopiedHash] = useState<string | null>(null);
   const [tamperNotice, setTamperNotice] = useState<string | null>(null);
 
+  const [isAnchoring, setIsAnchoring] = useState(false);
+
   const trees = storage.getTrees();
   const careRecords = storage.getCareRecords();
   const incidents = storage.getIncidents();
   const anchors = blockchainService.getAllAnchors();
   const nodeStatus = blockchainService.getNodeStatus();
+
+  const effectiveRecordId =
+    selectedRecordId ||
+    (selectedRecordType === 'TREE_PROFILE'
+      ? trees[0]?.id
+      : selectedRecordType === 'CARE_RECORD'
+      ? careRecords[0]?.id
+      : incidents[0]?.id) ||
+    '';
 
   const handleToggleNode = () => {
     const next = !nodeOnline;
@@ -46,23 +57,22 @@ export const BlockchainVerifyView: React.FC = () => {
     setTimeout(() => setCopiedHash(null), 2000);
   };
 
+  const getSelectedRecordObj = () => {
+    if (selectedRecordType === 'TREE_PROFILE') {
+      return storage.getTreeById(effectiveRecordId);
+    }
+    if (selectedRecordType === 'CARE_RECORD') {
+      return storage.getCareRecords().find((c) => c.id === effectiveRecordId);
+    }
+    return storage.getIncidentById(effectiveRecordId);
+  };
+
   const handleVerify = async () => {
     setIsVerifying(true);
     setVerifyResult(null);
 
-    // Tạo độ trễ 600ms để hiệu ứng tia quét Laser chạy mượt mà
-    await new Promise((r) => setTimeout(r, 600));
-
     try {
-      let recordData: any = null;
-      if (selectedRecordType === 'TREE_PROFILE') {
-        recordData = storage.getTreeById(selectedRecordId);
-      } else if (selectedRecordType === 'CARE_RECORD') {
-        recordData = storage.getCareRecords().find((c) => c.id === selectedRecordId);
-      } else {
-        recordData = storage.getIncidentById(selectedRecordId);
-      }
-
+      const recordData = getSelectedRecordObj();
       if (!recordData) {
         alert('Không tìm thấy bản ghi trong cơ sở dữ liệu!');
         return;
@@ -75,21 +85,39 @@ export const BlockchainVerifyView: React.FC = () => {
     }
   };
 
-  const handleTamperSelectedTree = () => {
-    const tree = storage.getTreeById(selectedRecordId);
+  const handleAnchorNow = async () => {
+    const recordData: any = getSelectedRecordObj();
+    if (!recordData) return;
+    const key = recordData.publicCode || String(recordData.id);
+    setIsAnchoring(true);
+    try {
+      const res = await blockchainService.anchorExistingRecord(selectedRecordType, key);
+      if (!res.success) {
+        alert(res.message || 'Không thể neo bản ghi lên Sepolia');
+      } else {
+        await storage.syncAll();
+        await handleVerify();
+      }
+    } finally {
+      setIsAnchoring(false);
+    }
+  };
+
+  const handleTamperSelectedTree = async () => {
+    const tree = storage.getTreeById(effectiveRecordId);
     if (!tree) return;
 
     const newStatus: TreeHealthStatus = tree.healthStatus === 'GOOD' ? 'CRITICAL' : 'GOOD';
-    storage.tamperTree(tree.id, newStatus);
+    await storage.tamperTree(tree.id, newStatus);
     setTamperNotice(
-      `Đã cố tình sửa trộm trường "healthStatus" của [${tree.publicCode}] từ "${tree.healthStatus}" thành "${newStatus}" trong DB mà không thực hiện giao dịch Blockchain! Hãy bấm nút "Kiểm tra tính toàn vẹn" bên dưới để quan sát hệ thống phát hiện băm sai lệch (MISMATCH).`
+      `Đã cố tình sửa trộm dữ liệu của [${tree.publicCode}] trực tiếp trong MySQL mà không ghi giao dịch Blockchain! Hãy bấm "Kiểm tra tính toàn vẹn" để quan sát hệ thống phát hiện HASH MISMATCH với Sepolia.`
     );
     setVerifyResult(null);
   };
 
-  const handleRestoreDefaults = () => {
-    storage.resetToDefaults();
-    setTamperNotice('Đã khôi phục dữ liệu mẫu gốc từ Blockchain.');
+  const handleRestoreDefaults = async () => {
+    await storage.resetToDefaults();
+    setTamperNotice('Đã khôi phục dữ liệu gốc trong MySQL và đồng bộ lại từ Sepolia.');
     setVerifyResult(null);
   };
 
@@ -120,17 +148,16 @@ export const BlockchainVerifyView: React.FC = () => {
           <div className="flex items-center justify-between gap-3">
             <span className="text-white/80 font-medium">Trạng thái Node EVM:</span>
             <span
-              className={`font-mono font-bold px-2.5 py-0.5 rounded-full text-[10px] shadow-xs flex items-center gap-1.5 ${
-                nodeOnline ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'
-              }`}
+              className={`font-mono font-bold px-2.5 py-0.5 rounded-full text-[10px] shadow-xs flex items-center gap-1.5 ${nodeOnline ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'
+                }`}
             >
               <span className={`w-1.5 h-1.5 rounded-full ${nodeOnline ? 'bg-white animate-pulse' : 'bg-white'}`} />
-              <span>{nodeOnline ? 'ONLINE (127.0.0.1:8545)' : 'OFFLINE'}</span>
+              <span>{nodeOnline ? 'ONLINE (Sepolia Testnet)' : 'OFFLINE'}</span>
             </span>
           </div>
 
           <div className="font-mono text-[11px] text-white/90 space-y-1">
-            <div>Chain ID: <strong>{nodeStatus.chainId} (Local Hardhat)</strong></div>
+            <div>Chain ID: <strong>{nodeStatus.chainId} (Sepolia Testnet)</strong></div>
             <div className="truncate max-w-[220px]">Contract: {nodeStatus.contractAddress}</div>
             <div>Block mới nhất: <strong>#{nodeStatus.blockNumber}</strong></div>
           </div>
@@ -190,7 +217,7 @@ export const BlockchainVerifyView: React.FC = () => {
             <div>
               <label className="block font-semibold text-slate-700 mb-1">Chọn bản ghi cụ thể:</label>
               <select
-                value={selectedRecordId}
+                value={effectiveRecordId}
                 onChange={(e) => {
                   setSelectedRecordId(e.target.value);
                   setVerifyResult(null);
@@ -242,15 +269,14 @@ export const BlockchainVerifyView: React.FC = () => {
           {/* Verification Result Output */}
           {verifyResult && (
             <div
-              className={`p-5 rounded-2xl border text-xs space-y-3 animate-in fade-in duration-200 ${
-                verifyResult.status === 'VALID'
+              className={`p-5 rounded-2xl border text-xs space-y-3 animate-in fade-in duration-200 ${verifyResult.status === 'VALID'
                   ? 'bg-emerald-50 border-emerald-300 text-emerald-950'
                   : verifyResult.status === 'MISMATCH'
-                  ? 'bg-red-50 border-red-300 text-red-950'
-                  : verifyResult.status === 'UNAVAILABLE'
-                  ? 'bg-slate-100 border-slate-300 text-slate-800'
-                  : 'bg-amber-50 border-amber-300 text-amber-950'
-              }`}
+                    ? 'bg-red-50 border-red-300 text-red-950'
+                    : verifyResult.status === 'UNAVAILABLE'
+                      ? 'bg-slate-100 border-slate-300 text-slate-800'
+                      : 'bg-amber-50 border-amber-300 text-amber-950'
+                }`}
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 font-bold text-sm">
@@ -264,6 +290,12 @@ export const BlockchainVerifyView: React.FC = () => {
                     <>
                       <AlertTriangle className="w-5 h-5 text-red-600" />
                       <span>PHÁT HIỆN GIAN LẬN: MISMATCH (KHÔNG KHỚP)</span>
+                    </>
+                  )}
+                  {verifyResult.status === 'NOT_ANCHORED' && (
+                    <>
+                      <AlertTriangle className="w-5 h-5 text-amber-600" />
+                      <span>CHƯA NEO LÊN SEPOLIA (NOT ANCHORED)</span>
                     </>
                   )}
                   {verifyResult.status === 'UNAVAILABLE' && (
@@ -281,12 +313,25 @@ export const BlockchainVerifyView: React.FC = () => {
 
               <p className="text-[11px] leading-relaxed opacity-90">
                 {verifyResult.status === 'VALID' &&
-                  'Chuỗi băm SHA-256 từ cơ sở dữ liệu hiện thời hoàn toàn trùng khớp từng byte với bản ghi đã neo trên Smart Contract. Không có bất kỳ sự sửa đổi nào sau khi neo.'}
+                  'Chuỗi băm SHA-256 từ cơ sở dữ liệu MySQL hiện thời hoàn toàn trùng khớp từng byte với bản ghi đã neo trên Smart Contract Sepolia. Không có bất kỳ sự sửa đổi nào sau khi neo.'}
                 {verifyResult.status === 'MISMATCH' &&
-                  'CẢNH BÁO: Dữ liệu trong cơ sở dữ liệu đã bị ai đó sửa đổi trái phép sau khi giao dịch đã được ghi nhận trên Blockchain! Bằng chứng mã hóa bị sai lệch.'}
+                  'CẢNH BÁO: Dữ liệu trong cơ sở dữ liệu MySQL đã bị ai đó sửa đổi trái phép sau khi giao dịch đã được ghi nhận trên Sepolia Blockchain! Bằng chứng mã hóa bị sai lệch.'}
+                {verifyResult.status === 'NOT_ANCHORED' &&
+                  'Bản ghi này đang có trong MySQL nhưng chưa được ghi dấu (anchor) lên Smart Contract Sepolia. Bạn có thể bấm nút bên dưới để neo lên Sepolia ngay.'}
                 {verifyResult.status === 'UNAVAILABLE' &&
-                  'Không thể kết nối đến node Blockchain. Nghiệp vụ lưu trữ cơ sở dữ liệu vẫn an toàn và chuyển sang chế độ đợi đối chiếu (PENDING).'}
+                  'Không thể kết nối đến node Sepolia. Nghiệp vụ lưu trữ cơ sở dữ liệu vẫn an toàn và chuyển sang chế độ đợi đối chiếu (PENDING).'}
               </p>
+
+              {verifyResult.status === 'NOT_ANCHORED' && (
+                <button
+                  onClick={handleAnchorNow}
+                  disabled={isAnchoring}
+                  className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-lg text-[11px] flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <Link className="w-3.5 h-3.5" />
+                  <span>{isAnchoring ? 'Đang gửi giao dịch lên Sepolia...' : 'Neo bản ghi này lên Sepolia ngay'}</span>
+                </button>
+              )}
 
               {/* Hash comparison boxes */}
               <div className="space-y-2 pt-1">
@@ -413,7 +458,7 @@ export const BlockchainVerifyView: React.FC = () => {
               <span>A18 — Sổ cái Hoạt động Blockchain (On-Chain Activity Log)</span>
             </h2>
             <p className="text-[11px] text-slate-500">
-              Tổng số {anchors.length} bản ghi đã neo thành công trên mạng Hardhat Local EVM.
+              Tổng số {anchors.length} bản ghi đã neo thành công trên mạng Ethereum Sepolia Testnet.
             </p>
           </div>
         </div>
