@@ -13,6 +13,8 @@ const pool = mysql.createPool({
   connectionLimit: 10,
   queueLimit: 0,
   charset: 'utf8mb4',
+  timezone: 'Z',
+  dateStrings: true,
 });
 
 async function initDatabase() {

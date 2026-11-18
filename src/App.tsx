@@ -20,8 +20,22 @@ import { PublicTreeModal } from './components/PublicTreeModal';
 import { storage } from './db/storage';
 import { Tree, User } from './types';
 
+function getInitialTab(): string {
+  if (typeof window === 'undefined') return 'dashboard';
+  const params = new URLSearchParams(window.location.search);
+  const tabParam = params.get('tab');
+  if (tabParam) return tabParam;
+  const p = window.location.pathname.toLowerCase();
+  if (p.startsWith('/verifier')) return 'blockchain';
+  if (p.startsWith('/citizen') || p.startsWith('/incidents')) return 'incidents';
+  if (p.startsWith('/care')) return 'care';
+  if (p.startsWith('/trees')) return 'trees';
+  if (p.startsWith('/map')) return 'map';
+  return 'dashboard';
+}
+
 export default function App() {
-  const [activeTab, setActiveTab] = useState<string>('dashboard');
+  const [activeTab, setActiveTab] = useState<string>(getInitialTab);
   const [currentUser, setCurrentUser] = useState<User>(storage.getActiveUser());
 
   // Modals state

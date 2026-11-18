@@ -338,6 +338,7 @@ class StorageService {
         staff_id: staffNumericId,
         caretaker_name: data.staffName || this.activeUser.fullName,
         action_type: careActionToDb(data.actionType),
+        service_cost: Number(data.serviceCost || 0),
         health_before: healthToDb(data.healthBefore),
         health_after: healthToDb(data.healthAfter),
         notes: data.notes,
@@ -410,6 +411,8 @@ class StorageService {
     actorName: string;
     note: string;
     assignedToUserId?: string | null;
+    serviceCost?: number;
+    resolutionNotes?: string;
   }): Promise<Incident> {
     const actorNumericId = Number.isInteger(Number(params.actorUserId)) ? Number(params.actorUserId) : null;
     const assignedNumericId =
@@ -425,6 +428,8 @@ class StorageService {
         assigned_staff_id: assignedNumericId,
         actor_id: actorNumericId,
         note: params.note,
+        ...(params.serviceCost !== undefined ? { service_cost: Number(params.serviceCost) } : {}),
+        ...(params.resolutionNotes !== undefined ? { resolution_notes: params.resolutionNotes } : {}),
       }),
     });
     const json = await res.json();

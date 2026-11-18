@@ -126,6 +126,9 @@ export const CareRecordsView: React.FC<CareRecordsViewProps> = ({
                     <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#174B36] text-white">
                       {care.actionType}
                     </span>
+                    <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-100 text-emerald-800">
+                      {Number(care.serviceCost || 0).toLocaleString('vi-VN')} VNĐ
+                    </span>
                     <span className="text-slate-300">·</span>
                     <span className="text-xs text-slate-500 font-mono">
                       {new Date(care.performedAt).toLocaleDateString('vi-VN')} {new Date(care.performedAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
