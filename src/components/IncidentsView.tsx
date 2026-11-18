@@ -65,8 +65,17 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
 
   // Citizen lookup state
   const [lookupCode, setLookupCode] = useState('');
+  const [lookupTreeFilter, setLookupTreeFilter] = useState('');
   const [lookupResult, setLookupResult] = useState<Incident | null>(null);
   const [lookupError, setLookupError] = useState<string | null>(null);
+  const [myReportedCodes, setMyReportedCodes] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('urbantree_my_incidents');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
 
   const filteredIncidents = incidents.filter((inc) => {
     const matchesSearch =
@@ -134,6 +143,15 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
     });
 
     setReportSuccessCode(newInc.publicCode);
+    setLookupResult(newInc);
+    setLookupCode(newInc.publicCode);
+    const nextCodes = [newInc.publicCode, ...myReportedCodes.filter((c) => c !== newInc.publicCode)].slice(0, 10);
+    setMyReportedCodes(nextCodes);
+    try {
+      localStorage.setItem('urbantree_my_incidents', JSON.stringify(nextCodes));
+    } catch {
+      // Ignore storage quota errors
+    }
     setReportDesc('');
     setReportAddress('');
   };
@@ -141,12 +159,33 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
   const handleCitizenLookup = (e: React.FormEvent) => {
     e.preventDefault();
     setLookupError(null);
-    const inc = storage.getIncidentByPublicCode(lookupCode);
-    if (inc) {
-      setLookupResult(inc);
+    const q = lookupCode.trim().toLowerCase();
+    if (!q) {
+      setLookupError('Vui lòng nhập mã phản ánh, số điện thoại hoặc mã cây (VD: TREE-001).');
+      return;
+    }
+
+    const byCode = storage.getIncidentByPublicCode(lookupCode);
+    if (byCode) {
+      setLookupResult(byCode);
+      return;
+    }
+
+    // Tìm theo SĐT người báo, mã cây (TREE-001), hoặc mô tả
+    const matched = incidents.find((inc) => {
+      const tree = inc.treeId ? trees.find((t) => t.id === inc.treeId) : null;
+      return (
+        (inc.reporterPhone && inc.reporterPhone.toLowerCase().includes(q)) ||
+        (tree && tree.publicCode.toLowerCase() === q) ||
+        inc.description.toLowerCase().includes(q)
+      );
+    });
+
+    if (matched) {
+      setLookupResult(matched);
     } else {
       setLookupResult(null);
-      setLookupError(`Không tìm thấy sự cố với mã "${lookupCode}". Vui lòng kiểm tra lại.`);
+      setLookupError(`Không tìm thấy phản ánh khớp với "${lookupCode}". Bạn có thể chọn trực tiếp từ danh sách bên dưới.`);
     }
   };
 
@@ -607,97 +646,273 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
 
       {/* Subtab 3: Citizen Lookup Portal */}
       {activeSubTab === 'public_lookup' && (
-        <div className="max-w-xl mx-auto space-y-4 text-xs">
+        <div className="max-w-2xl mx-auto space-y-4 text-xs">
           <div className="bg-white p-6 rounded-2xl border border-[#E0EBDD] shadow-sm space-y-4">
-            <h2 className="text-base font-bold text-[#174B36]">
-              Tra cứu Tiến trình Xử lý Sự cố theo Mã
-            </h2>
-            <p className="text-slate-500">
-              Nhập mã phản ánh nhận được (ví dụ: <button onClick={() => setLookupCode('INC-84920')} className="text-[#174B36] font-bold underline font-mono">INC-84920</button> hoặc <button onClick={() => setLookupCode('INC-53219')} className="text-[#174B36] font-bold underline font-mono">INC-53219</button>)
-            </p>
+            <div>
+              <h2 className="text-base font-bold text-[#174B36]">
+                Tra cứu Tiến trình Xử lý & Tình trạng Cây sau Phản ánh
+              </h2>
+              <p className="text-slate-500 mt-0.5">
+                Không cần nhớ mã báo cáo — bạn có thể chọn trực tiếp cây xanh, bấm vào phản ánh vừa gửi hoặc tìm bằng SĐT / mã cây.
+              </p>
+            </div>
 
-            <form onSubmit={handleCitizenLookup} className="flex gap-2">
-              <input
-                type="text"
-                value={lookupCode}
-                onChange={(e) => setLookupCode(e.target.value.toUpperCase())}
-                placeholder="INC-XXXXX"
-                className="flex-1 px-3 py-2 border border-slate-200 rounded-lg font-mono font-bold text-[#174B36] text-sm"
-              />
-              <button
-                type="submit"
-                className="px-4 py-2 bg-[#174B36] hover:bg-[#347A50] text-white font-semibold rounded-lg shrink-0 transition-colors"
+            {myReportedCodes.length > 0 && (
+              <div className="p-3 rounded-xl bg-emerald-50/70 border border-emerald-200 space-y-2">
+                <div className="text-[11px] font-bold text-[#174B36]">
+                  Phản ánh bạn vừa gửi gần đây trên thiết bị này (bấm để xem ngay):
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {myReportedCodes.map((code) => {
+                    const inc = storage.getIncidentByPublicCode(code);
+                    if (!inc) return null;
+                    return (
+                      <button
+                        key={code}
+                        type="button"
+                        onClick={() => {
+                          setLookupCode(code);
+                          setLookupResult(inc);
+                          setLookupError(null);
+                        }}
+                        className={`px-2.5 py-1 rounded-lg border text-[11px] font-mono font-bold transition-colors ${
+                          lookupResult?.publicCode === code
+                            ? 'bg-[#174B36] text-white border-[#174B36]'
+                            : 'bg-white text-[#174B36] border-emerald-200 hover:bg-emerald-100'
+                        }`}
+                      >
+                        {code} · {inc.status}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <form onSubmit={handleCitizenLookup} className="flex gap-2">
+                <input
+                  type="text"
+                  value={lookupCode}
+                  onChange={(e) => setLookupCode(e.target.value)}
+                  placeholder="Nhập mã INC-..., SĐT hoặc TREE-001"
+                  className="flex-1 px-3 py-2 border border-slate-200 rounded-lg font-mono font-semibold text-[#174B36] text-xs"
+                />
+                <button
+                  type="submit"
+                  className="px-3.5 py-2 bg-[#174B36] hover:bg-[#347A50] text-white font-semibold rounded-lg shrink-0 transition-colors"
+                >
+                  Tìm
+                </button>
+              </form>
+
+              <select
+                value={lookupTreeFilter}
+                onChange={(e) => setLookupTreeFilter(e.target.value)}
+                className="px-3 py-2 border border-slate-200 rounded-lg bg-white text-xs font-medium text-slate-700"
               >
-                Tra cứu
-              </button>
-            </form>
+                <option value="">-- Lọc phản ánh theo Cây xanh --</option>
+                {trees.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    [{t.publicCode}] {t.displayName}
+                  </option>
+                ))}
+              </select>
+            </div>
 
             {lookupError && (
               <div className="p-3 rounded-lg bg-red-50 text-red-700 text-xs">
                 {lookupError}
               </div>
             )}
-          </div>
 
-          {lookupResult && (
-            <div className="bg-white p-6 rounded-2xl border border-[#E0EBDD] shadow-sm space-y-4 animate-in fade-in duration-150">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                <div>
-                  <span className="font-mono text-base font-bold text-[#174B36]">
-                    {lookupResult.publicCode}
-                  </span>
-                  <div className="text-[11px] text-slate-500">
-                    Ghi nhận lúc: {new Date(lookupResult.reportedAt).toLocaleString('vi-VN')}
-                  </div>
-                </div>
-                <span
-                  className={`px-2.5 py-1 rounded-full text-xs font-bold ${
-                    lookupResult.status === 'RESOLVED'
-                      ? 'bg-emerald-100 text-emerald-800'
-                      : lookupResult.status === 'IN_PROGRESS'
-                      ? 'bg-blue-100 text-blue-800'
-                      : 'bg-amber-100 text-amber-800'
-                  }`}
-                >
-                  {lookupResult.status}
-                </span>
+            {/* Danh sách phản ánh gần đây để chọn nhanh không cần nhớ mã */}
+            <div className="pt-2 border-t border-slate-100 space-y-2">
+              <div className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">
+                {lookupTreeFilter
+                  ? 'Các phản ánh của cây đã chọn:'
+                  : 'Các phản ánh gần đây trên hệ thống (bấm để xem tiến độ & cây):'}
               </div>
-
-              <div className="p-3 bg-slate-50 rounded-xl space-y-1">
-                <span className="text-slate-400 text-[10px] block">Nội dung phản ánh:</span>
-                <p className="text-slate-800 font-medium">{lookupResult.description}</p>
-                <div className="text-slate-500 text-[11px] pt-1">
-                  Địa điểm: {lookupResult.address}
-                </div>
-              </div>
-
-              {/* Progress Timeline */}
-              <div className="space-y-3 pt-2">
-                <span className="font-bold text-[#174B36] text-xs uppercase tracking-wider block">
-                  Nhật ký tiến trình thực tế:
-                </span>
-                <div className="space-y-3 pl-3 border-l-2 border-[#174B36]/30">
-                  {storage.getIncidentUpdates(lookupResult.id).map((upd) => (
-                    <div key={upd.id} className="relative pl-3 space-y-0.5">
-                      <div className="absolute -left-[19px] top-1 w-2.5 h-2.5 rounded-full bg-[#174B36] ring-4 ring-white" />
-                      <div className="flex items-center justify-between text-slate-500 text-[10px]">
-                        <span className="font-bold text-slate-800">{upd.actorName}</span>
-                        <span className="font-mono">
-                          {new Date(upd.createdAt).toLocaleString('vi-VN')}
+              <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
+                {incidents
+                  .filter((i) => !lookupTreeFilter || i.treeId === lookupTreeFilter)
+                  .slice(0, 10)
+                  .map((inc) => {
+                    const tree = inc.treeId ? trees.find((t) => t.id === inc.treeId) : null;
+                    const active = lookupResult?.id === inc.id;
+                    return (
+                      <button
+                        key={inc.id}
+                        type="button"
+                        onClick={() => {
+                          setLookupCode(inc.publicCode);
+                          setLookupResult(inc);
+                          setLookupError(null);
+                        }}
+                        className={`w-full text-left p-2.5 rounded-xl border transition-colors flex items-center justify-between gap-2 ${
+                          active
+                            ? 'bg-emerald-50 border-[#347A50]'
+                            : 'bg-slate-50/70 border-slate-200/70 hover:bg-slate-100'
+                        }`}
+                      >
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-mono font-bold text-[#174B36]">{inc.publicCode}</span>
+                            {tree && (
+                              <span className="px-1.5 py-0.5 rounded bg-[#E0EBDD] text-[#174B36] font-mono text-[10px] font-bold">
+                                {tree.publicCode} · {tree.displayName}
+                              </span>
+                            )}
+                            <span className="text-[10px] text-slate-400">
+                              {new Date(inc.reportedAt).toLocaleDateString('vi-VN')}
+                            </span>
+                          </div>
+                          <div className="text-slate-700 truncate mt-0.5">{inc.description}</div>
+                        </div>
+                        <span
+                          className={`shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                            inc.status === 'RESOLVED'
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : inc.status === 'IN_PROGRESS'
+                              ? 'bg-blue-100 text-blue-800'
+                              : 'bg-amber-100 text-amber-800'
+                          }`}
+                        >
+                          {inc.status}
                         </span>
-                      </div>
-                      <div className="text-[#347A50] font-semibold text-xs">
-                        {upd.oldStatus} ➔ {upd.newStatus}
-                      </div>
-                      <p className="text-slate-700 text-xs bg-slate-50 p-2 rounded-lg border border-slate-100">
-                        {upd.note}
-                      </p>
-                    </div>
-                  ))}
-                </div>
+                      </button>
+                    );
+                  })}
               </div>
             </div>
-          )}
+          </div>
+
+          {lookupResult && (() => {
+            const linkedTree = lookupResult.treeId ? trees.find((t) => t.id === lookupResult.treeId) : null;
+            const treeCares = linkedTree ? storage.getCareRecords(linkedTree.id).slice(0, 3) : [];
+            return (
+              <div className="bg-white p-6 rounded-2xl border border-[#E0EBDD] shadow-sm space-y-4 animate-in fade-in duration-150">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                  <div>
+                    <span className="font-mono text-base font-bold text-[#174B36]">
+                      {lookupResult.publicCode}
+                    </span>
+                    <div className="text-[11px] text-slate-500">
+                      Ghi nhận lúc: {new Date(lookupResult.reportedAt).toLocaleString('vi-VN')}
+                    </div>
+                  </div>
+                  <span
+                    className={`px-2.5 py-1 rounded-full text-xs font-bold ${
+                      lookupResult.status === 'RESOLVED'
+                        ? 'bg-emerald-100 text-emerald-800'
+                        : lookupResult.status === 'IN_PROGRESS'
+                        ? 'bg-blue-100 text-blue-800'
+                        : 'bg-amber-100 text-amber-800'
+                    }`}
+                  >
+                    {lookupResult.status}
+                  </span>
+                </div>
+
+                {linkedTree && (
+                  <div className="p-3.5 bg-emerald-50/60 border border-emerald-200 rounded-xl flex items-center justify-between gap-3">
+                    <div>
+                      <div className="text-[10px] font-bold uppercase text-emerald-800">
+                        Cây xanh liên quan & Tình trạng sau xử lý
+                      </div>
+                      <div className="font-bold text-[#174B36] text-xs mt-0.5">
+                        [{linkedTree.publicCode}] {linkedTree.displayName} · Sức khỏe: {linkedTree.healthStatus}
+                      </div>
+                      <div className="text-[11px] text-slate-600">{linkedTree.address}</div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => onSelectTree(linkedTree)}
+                      className="shrink-0 px-3 py-1.5 bg-[#174B36] hover:bg-[#347A50] text-white rounded-lg font-semibold text-[11px] flex items-center gap-1"
+                    >
+                      <span>Xem cây</span>
+                      <ExternalLink className="w-3 h-3" />
+                    </button>
+                  </div>
+                )}
+
+                <div className="p-3 bg-slate-50 rounded-xl space-y-1">
+                  <span className="text-slate-400 text-[10px] block">Nội dung phản ánh:</span>
+                  <p className="text-slate-800 font-medium">{lookupResult.description}</p>
+                  <div className="text-slate-500 text-[11px] pt-1">
+                    Địa điểm: {lookupResult.address}
+                  </div>
+                  {Number(lookupResult.serviceCost || 0) > 0 && (
+                    <div className="text-emerald-700 font-mono font-bold text-[11px] pt-1">
+                      Chi phí dịch vụ xử lý đã nghiệm thu: {Number(lookupResult.serviceCost).toLocaleString('vi-VN')} VNĐ
+                    </div>
+                  )}
+                  {lookupResult.txHash && (
+                    <div className="pt-1 text-[10px] font-mono">
+                      <a
+                        href={`https://sepolia.etherscan.io/tx/${lookupResult.txHash}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-blue-700 hover:underline break-all"
+                      >
+                        Đã niêm phong Sepolia: {lookupResult.txHash}
+                      </a>
+                    </div>
+                  )}
+                </div>
+
+                {treeCares.length > 0 && (
+                  <div className="space-y-1.5">
+                    <span className="font-bold text-[#174B36] text-[11px] uppercase tracking-wider block">
+                      Hoạt động chăm sóc / cắt tỉa gần đây của cây này:
+                    </span>
+                    {treeCares.map((c) => (
+                      <div key={c.id} className="p-2 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-between text-[11px]">
+                        <span>
+                          <strong>{c.actionType}</strong> — {c.notes}
+                        </span>
+                        <span className="font-mono font-bold text-emerald-700 shrink-0 ml-2">
+                          {Number(c.serviceCost || 0).toLocaleString('vi-VN')} VNĐ
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Progress Timeline */}
+                <div className="space-y-3 pt-2">
+                  <span className="font-bold text-[#174B36] text-xs uppercase tracking-wider block">
+                    Nhật ký tiến trình thực tế:
+                  </span>
+                  <div className="space-y-3 pl-3 border-l-2 border-[#174B36]/30">
+                    {storage.getIncidentUpdates(lookupResult.id).length === 0 ? (
+                      <div className="text-[11px] text-slate-500 pl-2">
+                        Sự cố đã được ghi nhận vào hệ thống và đang chờ cán bộ cập nhật tiến trình.
+                      </div>
+                    ) : (
+                      storage.getIncidentUpdates(lookupResult.id).map((upd) => (
+                        <div key={upd.id} className="relative pl-3 space-y-0.5">
+                          <div className="absolute -left-[19px] top-1 w-2.5 h-2.5 rounded-full bg-[#174B36] ring-4 ring-white" />
+                          <div className="flex items-center justify-between text-slate-500 text-[10px]">
+                            <span className="font-bold text-slate-800">{upd.actorName}</span>
+                            <span className="font-mono">
+                              {new Date(upd.createdAt).toLocaleString('vi-VN')}
+                            </span>
+                          </div>
+                          <div className="text-[#347A50] font-semibold text-xs">
+                            {upd.oldStatus} ➔ {upd.newStatus}
+                          </div>
+                          <p className="text-slate-700 text-xs bg-slate-50 p-2 rounded-lg border border-slate-100">
+                            {upd.note}
+                          </p>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
         </div>
       )}
     </div>
