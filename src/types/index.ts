@@ -93,6 +93,8 @@ export interface Incident {
   address?: string;
   severity: IncidentSeverity;
   status: IncidentStatus;
+  serviceCost?: number;
+  resolutionNotes?: string;
   assignedToUserId?: string | null;
   assignedToName?: string;
   reportedAt: string; // ISO-8601 UTC
@@ -139,6 +141,15 @@ export interface BlockchainAnchor {
 
 export type VerificationStatus = 'VALID' | 'MISMATCH' | 'NOT_ANCHORED' | 'PENDING' | 'UNAVAILABLE';
 
+export interface VerificationFieldComparison {
+  key: string;
+  label: string;
+  type?: 'text' | 'currency' | 'date';
+  originalValue: unknown;
+  currentValue: unknown;
+  matched: boolean | null;
+}
+
 export interface VerificationResult {
   status: VerificationStatus;
   recordType: RecordType;
@@ -149,7 +160,18 @@ export interface VerificationResult {
   blockNumber?: number;
   contractAddress?: string;
   anchoredAt?: string;
-  canonicalJson: string;
+  canonicalJson?: string;
+  currentSnapshot?: {
+    title: string;
+    summary: string;
+    fields?: Array<{ key: string; label: string; value: unknown; type?: string }>;
+  };
+  comparison?: {
+    hasSnapshot: boolean;
+    allMatched: boolean;
+    fields: VerificationFieldComparison[];
+    changedFields: VerificationFieldComparison[];
+  };
   diffFields?: Array<{
     field: string;
     currentValue: unknown;

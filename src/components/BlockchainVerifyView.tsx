@@ -104,21 +104,54 @@ export const BlockchainVerifyView: React.FC = () => {
   };
 
   const handleTamperSelectedTree = async () => {
-    const tree = storage.getTreeById(effectiveRecordId);
-    if (!tree) return;
+    const recordData: any = getSelectedRecordObj();
+    if (!recordData) return;
+    const key = recordData.publicCode || String(recordData.id);
 
-    const newStatus: TreeHealthStatus = tree.healthStatus === 'GOOD' ? 'CRITICAL' : 'GOOD';
-    await storage.tamperTree(tree.id, newStatus);
-    setTamperNotice(
-      `Đã cố tình sửa trộm dữ liệu của [${tree.publicCode}] trực tiếp trong MySQL mà không ghi giao dịch Blockchain! Hãy bấm "Kiểm tra tính toàn vẹn" để quan sát hệ thống phát hiện HASH MISMATCH với Sepolia.`
-    );
-    setVerifyResult(null);
+    try {
+      const res = await fetch('/api/blockchain/tamper-demo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ recordId: key, action: 'tamper' }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        await storage.syncAll();
+        setTamperNotice(data.message);
+        await handleVerify();
+        return;
+      }
+    } catch {
+      // Fallback for TREE_PROFILE without snapshot
+    }
+
+    if (selectedRecordType === 'TREE_PROFILE') {
+      const tree = storage.getTreeById(effectiveRecordId);
+      if (!tree) return;
+      const newStatus: TreeHealthStatus = tree.healthStatus === 'GOOD' ? 'CRITICAL' : 'GOOD';
+      await storage.tamperTree(tree.id, newStatus);
+      setTamperNotice(
+        `Đã cố tình sửa trộm dữ liệu của [${tree.publicCode}] trực tiếp trong MySQL mà không ghi giao dịch Blockchain! Hãy bấm "Kiểm tra tính toàn vẹn" để quan sát hệ thống phát hiện HASH MISMATCH với Sepolia.`
+      );
+      await handleVerify();
+    } else {
+      setTamperNotice('Hãy neo bản ghi này lên Sepolia trước khi chạy giả lập sửa lén.');
+    }
   };
 
   const handleRestoreDefaults = async () => {
+    const recordData: any = getSelectedRecordObj();
+    const key = recordData?.publicCode || String(recordData?.id || '');
+    if (key) {
+      await fetch('/api/blockchain/tamper-demo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ recordId: key, action: 'restore' }),
+      }).catch(() => null);
+    }
     await storage.resetToDefaults();
     setTamperNotice('Đã khôi phục dữ liệu gốc trong MySQL và đồng bộ lại từ Sepolia.');
-    setVerifyResult(null);
+    await handleVerify();
   };
 
   return (
@@ -231,11 +264,14 @@ export const BlockchainVerifyView: React.FC = () => {
                     </option>
                   ))}
                 {selectedRecordType === 'CARE_RECORD' &&
-                  careRecords.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      [{c.actionType}] Cây #{c.treeId.slice(-4)} · {new Date(c.performedAt).toLocaleDateString('vi-VN')}
-                    </option>
-                  ))}
+                  careRecords.map((c) => {
+                    const t = trees.find((x) => x.id === c.treeId);
+                    return (
+                      <option key={c.id} value={c.id}>
+                        [{c.id}] {c.actionType} · {t?.publicCode || `Cây #${c.treeId}`} · {Number(c.serviceCost || 0).toLocaleString('vi-VN')} VNĐ
+                      </option>
+                    );
+                  })}
                 {(selectedRecordType === 'INCIDENT_REPORT' || selectedRecordType === 'INCIDENT_RESOLUTION') &&
                   incidents.map((i) => (
                     <option key={i.id} value={i.id}>
@@ -366,8 +402,63 @@ export const BlockchainVerifyView: React.FC = () => {
                 )}
               </div>
 
-              {/* Detected Diffs */}
-              {verifyResult.diffFields && verifyResult.diffFields.length > 0 && (
+              {/* Tóm tắt & Bảng đối chiếu chi tiết từng trường nghiệp vụ */}
+              {verifyResult.currentSnapshot?.summary && (
+                <div className="px-3 py-2 bg-white/90 rounded-xl border border-black/10 text-[11px] font-bold text-[#174B36]">
+                  📋 {verifyResult.currentSnapshot.summary}
+                </div>
+              )}
+
+              {verifyResult.comparison?.hasSnapshot && verifyResult.comparison.fields.length > 0 && (
+                <div className="bg-white rounded-xl border border-black/10 overflow-hidden">
+                  <div className="px-3 py-2 bg-slate-50 border-b text-[11px] font-bold text-slate-700 flex items-center justify-between">
+                    <span>Đối chiếu từng thông tin nghiệp vụ (MySQL ↔ Sepolia)</span>
+                    <span className={verifyResult.comparison.allMatched ? 'text-emerald-700' : 'text-red-600'}>
+                      {verifyResult.comparison.allMatched
+                        ? `Khớp ${verifyResult.comparison.fields.length}/${verifyResult.comparison.fields.length} mục`
+                        : `Sai lệch ${verifyResult.comparison.changedFields.length} mục!`}
+                    </span>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-[11px] border-collapse">
+                      <thead>
+                        <tr className="bg-slate-50/70 border-b text-[10px] text-slate-500 uppercase">
+                          <th className="py-1.5 px-2.5">Thông tin</th>
+                          <th className="py-1.5 px-2.5">Gốc niêm phong</th>
+                          <th className="py-1.5 px-2.5">MySQL hiện tại</th>
+                          <th className="py-1.5 px-2.5 text-center">Kết quả</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {verifyResult.comparison.fields.map((f) => {
+                          const isMismatch = f.matched === false;
+                          const fmt = (v: unknown) =>
+                            f.type === 'currency' ? `${Number(v || 0).toLocaleString('vi-VN')} VNĐ` : String(v ?? '');
+                          return (
+                            <tr key={f.key} className={isMismatch ? 'bg-red-50' : ''}>
+                              <td className="py-1.5 px-2.5 font-semibold text-slate-700">{f.label}</td>
+                              <td className="py-1.5 px-2.5 font-mono text-blue-800">{fmt(f.originalValue)}</td>
+                              <td className={`py-1.5 px-2.5 font-mono font-bold ${isMismatch ? 'text-red-700' : 'text-emerald-800'}`}>
+                                {fmt(f.currentValue)}
+                              </td>
+                              <td className="py-1.5 px-2.5 text-center">
+                                {isMismatch ? (
+                                  <span className="px-1.5 py-0.5 rounded bg-red-600 text-white font-bold text-[10px]">SAI KHỚP</span>
+                                ) : (
+                                  <span className="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold text-[10px]">Khớp</span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* Detected Diffs fallback */}
+              {verifyResult.diffFields && verifyResult.diffFields.length > 0 && !verifyResult.comparison?.hasSnapshot && (
                 <div className="p-3 bg-red-100/80 rounded-xl border border-red-200 text-[11px] space-y-1">
                   <div className="font-bold text-red-900">Chi tiết các trường dữ liệu bị sửa đổi trái phép:</div>
                   {verifyResult.diffFields.map((d) => (
@@ -379,8 +470,15 @@ export const BlockchainVerifyView: React.FC = () => {
               )}
 
               {verifyResult.txHash && (
-                <div className="text-[10px] font-mono text-slate-500 pt-1 flex items-center justify-between">
-                  <span className="truncate max-w-[280px]">TxHash: {verifyResult.txHash}</span>
+                <div className="text-[10px] font-mono text-slate-600 pt-1 flex items-center justify-between gap-2 flex-wrap">
+                  <a
+                    href={`https://sepolia.etherscan.io/tx/${verifyResult.txHash}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-blue-700 hover:underline truncate max-w-[300px]"
+                  >
+                    Sepolia Tx: {verifyResult.txHash}
+                  </a>
                   <span>Block #{verifyResult.blockNumber}</span>
                 </div>
               )}

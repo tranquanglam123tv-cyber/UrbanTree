@@ -21,6 +21,7 @@ export const CareFormModal: React.FC<CareFormModalProps> = ({
   const selectedTree = trees.find((t) => t.id === treeId);
 
   const [actionType, setActionType] = useState<CareActionType>('PRUNING');
+  const [serviceCost, setServiceCost] = useState<string>('1500000');
   const [healthBefore, setHealthBefore] = useState<TreeHealthStatus>(selectedTree?.healthStatus || 'FAIR');
   const [healthAfter, setHealthAfter] = useState<TreeHealthStatus>(selectedTree?.healthStatus || 'GOOD');
   const [notes, setNotes] = useState('');
@@ -43,6 +44,7 @@ export const CareFormModal: React.FC<CareFormModalProps> = ({
         staffUserId: activeUser.id,
         staffName: activeUser.fullName,
         actionType,
+        serviceCost: Number(serviceCost || 0),
         healthBefore,
         healthAfter,
         notes: notes.trim(),
@@ -120,6 +122,19 @@ export const CareFormModal: React.FC<CareFormModalProps> = ({
               <option value="SUPPORT_STAKE">Chống cọc đỡ & gia cố rễ (SUPPORT_STAKE)</option>
               <option value="TREATMENT">Bôi keo liền sẹo / Chữa sâu thân (TREATMENT)</option>
             </select>
+          </div>
+
+          <div>
+            <label className="block font-semibold text-slate-700 mb-1">Chi phí dịch vụ thực hiện (VNĐ)</label>
+            <input
+              type="number"
+              min={0}
+              step={10000}
+              value={serviceCost}
+              onChange={(e) => setServiceCost(e.target.value)}
+              placeholder="Ví dụ: 1500000"
+              className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:border-[#347A50] focus:ring-1 focus:ring-[#347A50] bg-white text-xs font-mono font-bold text-[#174B36]"
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-3">

@@ -288,6 +288,24 @@ class BlockchainService {
           }),
         });
         const data = await res.json();
+        const changed = Array.isArray(data.comparison?.changedFields) ? data.comparison.changedFields : [];
+        const diffFields =
+          changed.length > 0
+            ? changed.map((f: any) => ({
+                field: f.label || f.key,
+                currentValue: f.type === 'currency' ? `${Number(f.currentValue || 0).toLocaleString('vi-VN')} VNĐ` : f.currentValue,
+                anchoredValue: f.type === 'currency' ? `${Number(f.originalValue || 0).toLocaleString('vi-VN')} VNĐ` : f.originalValue,
+              }))
+            : data.status === 'MISMATCH'
+            ? [
+                {
+                  field: 'Mã băm MySQL vs Sepolia On-chain',
+                  currentValue: data.currentHash,
+                  anchoredValue: data.onChainHash,
+                },
+              ]
+            : undefined;
+
         return {
           status: data.status || 'UNAVAILABLE',
           recordType,
@@ -298,16 +316,9 @@ class BlockchainService {
           blockNumber: data.blockNumber || undefined,
           contractAddress: data.contractAddress || this.contractAddress,
           anchoredAt: data.anchoredAt || undefined,
-          diffFields:
-            data.status === 'MISMATCH'
-              ? [
-                  {
-                    field: 'MySQL Record vs Sepolia On-chain Hash',
-                    currentValue: data.currentHash,
-                    anchoredValue: data.onChainHash,
-                  },
-                ]
-              : undefined,
+          currentSnapshot: data.currentSnapshot || undefined,
+          comparison: data.comparison || undefined,
+          diffFields,
         };
       } catch {
         return {
