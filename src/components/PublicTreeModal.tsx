@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { Tree } from '../types';
 import { storage } from '../db/storage';
+import { anchorStatusLabel, careActionLabel, incidentStatusLabel } from '../services/apiMapper';
 
 interface PublicTreeModalProps {
   tree: Tree | null;
@@ -158,7 +159,7 @@ export const PublicTreeModal: React.FC<PublicTreeModalProps> = ({
                           : 'bg-amber-100 text-amber-800'
                       }`}
                     >
-                      {inc.status}
+                      {incidentStatusLabel(inc.status)}
                     </span>
                   </div>
                 ))}
@@ -178,7 +179,7 @@ export const PublicTreeModal: React.FC<PublicTreeModalProps> = ({
                     className="p-2.5 bg-emerald-50/40 rounded-xl border border-emerald-100 flex items-center justify-between gap-2 text-[11px]"
                   >
                     <div className="min-w-0">
-                      <span className="font-bold text-[#174B36]">{c.actionType}</span>
+                      <span className="font-bold text-[#174B36]">{careActionLabel(c.actionType)}</span>
                       <span className="text-slate-500 ml-1.5">
                         · {new Date(c.performedAt).toLocaleDateString('vi-VN')}
                       </span>
@@ -204,8 +205,8 @@ export const PublicTreeModal: React.FC<PublicTreeModalProps> = ({
                 </div>
               </div>
             </div>
-            <span className="px-2 py-0.5 rounded bg-emerald-200/60 text-emerald-800 font-bold text-[10px] font-mono">
-              {tree.anchorStatus || 'VERIFIED'}
+            <span className="px-2 py-0.5 rounded bg-emerald-200/60 text-emerald-800 font-bold text-[10px]">
+              {anchorStatusLabel(tree.anchorStatus)}
             </span>
           </div>
         </div>

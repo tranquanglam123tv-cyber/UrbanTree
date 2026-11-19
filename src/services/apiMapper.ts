@@ -280,3 +280,51 @@ export function mapIncidentUpdateFromDb(row: any): IncidentUpdate {
     createdAt: row.created_at || new Date().toISOString(),
   };
 }
+
+export function incidentStatusLabel(status?: IncidentStatus): string {
+  switch (status) {
+    case 'RECEIVED':
+      return 'Chờ xử lý';
+    case 'ASSIGNED':
+      return 'Đã phân công';
+    case 'IN_PROGRESS':
+      return 'Đang xử lý';
+    case 'RESOLVED':
+      return 'Đã xử lý';
+    case 'REJECTED':
+      return 'Từ chối';
+    default:
+      return 'Chờ xử lý';
+  }
+}
+
+export function severityLabel(severity?: IncidentSeverity): string {
+  return severityToDb(severity);
+}
+
+export function healthLabel(health?: TreeHealthStatus): string {
+  if (health === 'DEAD') return 'Đã chết';
+  return healthToDb(health);
+}
+
+export function careActionLabel(action?: CareActionType): string {
+  if (action === 'SURVEY') return 'Khảo sát';
+  if (action === 'TREATMENT') return 'Điều trị';
+  return careActionToDb(action);
+}
+
+export function anchorStatusLabel(status?: AnchorStatus): string {
+  switch (status) {
+    case 'CONFIRMED':
+      return 'Đã xác thực Sepolia';
+    case 'PENDING':
+      return 'Đang chờ xác thực';
+    case 'FAILED':
+      return 'Lỗi xác thực';
+    case 'UNAVAILABLE':
+      return 'Mất kết nối';
+    case 'NOT_ANCHORED':
+    default:
+      return 'Chưa niêm phong';
+  }
+}

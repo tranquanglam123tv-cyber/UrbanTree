@@ -14,6 +14,7 @@ import {
   Filter,
 } from 'lucide-react';
 import { storage } from '../db/storage';
+import { careActionLabel, healthLabel, incidentStatusLabel, severityLabel } from '../services/apiMapper';
 import { Incident, IncidentSeverity, IncidentStatus, IncidentUpdate, User } from '../types';
 
 interface IncidentsViewProps {
@@ -244,7 +245,7 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
               activeSubTab === 'public_lookup' ? 'bg-white text-[#174B36] shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            Tra cứu theo Mã
+            Tra cứu tiến độ
           </button>
         </div>
       </div>
@@ -331,10 +332,10 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
                                 : 'bg-amber-100 text-amber-700'
                             }`}
                           >
-                            {inc.severity}
+                            {severityLabel(inc.severity)}
                           </span>
                           <span className="text-[11px] font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded">
-                            {inc.status}
+                            {incidentStatusLabel(inc.status)}
                           </span>
                         </div>
 
@@ -384,7 +385,7 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
                       <div className="text-[10px] text-slate-400">Chi tiết & Tiến trình xử lý</div>
                     </div>
                     <span className="px-2 py-0.5 rounded font-bold text-[10px] bg-slate-100 text-slate-700">
-                      {selectedIncident.status}
+                      {incidentStatusLabel(selectedIncident.status)}
                     </span>
                   </div>
 
@@ -428,7 +429,7 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
                       <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 space-y-1.5 text-[11px]">
                         <div className="font-bold text-emerald-900 flex items-center gap-1.5">
                           <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
-                          <span>Hồ sơ đã chốt ({selectedIncident.status}) — Không thể cập nhật lại</span>
+                          <span>Hồ sơ đã chốt ({incidentStatusLabel(selectedIncident.status)}) — Không thể cập nhật lại</span>
                         </div>
                         <p className="text-emerald-800 leading-relaxed">
                           Biên bản sự cố này đã hoàn tất quy trình và khóa bất biến để bảo chứng toàn vẹn với Sepolia Blockchain.
@@ -541,7 +542,7 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
                             </span>
                           </div>
                           <div className="text-[#347A50] font-semibold">
-                            {upd.oldStatus} ➔ {upd.newStatus}
+                            {incidentStatusLabel(upd.oldStatus)} ➔ {incidentStatusLabel(upd.newStatus)}
                           </div>
                           <p className="text-slate-600">{upd.note}</p>
                         </div>
@@ -738,7 +739,7 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
                             : 'bg-white text-[#174B36] border-emerald-200 hover:bg-emerald-100'
                         }`}
                       >
-                        {code} · {inc.status}
+                        {code} · {incidentStatusLabel(inc.status)}
                       </button>
                     );
                   })}
@@ -835,7 +836,7 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
                               : 'bg-amber-100 text-amber-800'
                           }`}
                         >
-                          {inc.status}
+                          {incidentStatusLabel(inc.status)}
                         </span>
                       </button>
                     );
@@ -867,7 +868,7 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
                         : 'bg-amber-100 text-amber-800'
                     }`}
                   >
-                    {lookupResult.status}
+                    {incidentStatusLabel(lookupResult.status)}
                   </span>
                 </div>
 
@@ -878,7 +879,7 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
                         Cây xanh liên quan & Tình trạng sau xử lý
                       </div>
                       <div className="font-bold text-[#174B36] text-xs mt-0.5">
-                        [{linkedTree.publicCode}] {linkedTree.displayName} · Sức khỏe: {linkedTree.healthStatus}
+                        [{linkedTree.publicCode}] {linkedTree.displayName} · Sức khỏe: {healthLabel(linkedTree.healthStatus)}
                       </div>
                       <div className="text-[11px] text-slate-600">{linkedTree.address}</div>
                     </div>
@@ -926,7 +927,7 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
                     {treeCares.map((c) => (
                       <div key={c.id} className="p-2 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-between text-[11px]">
                         <span>
-                          <strong>{c.actionType}</strong> — {c.notes}
+                          <strong>{careActionLabel(c.actionType)}</strong> — {c.notes}
                         </span>
                         <span className="font-mono font-bold text-emerald-700 shrink-0 ml-2">
                           {Number(c.serviceCost || 0).toLocaleString('vi-VN')} VNĐ
@@ -957,7 +958,7 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
                             </span>
                           </div>
                           <div className="text-[#347A50] font-semibold text-xs">
-                            {upd.oldStatus} ➔ {upd.newStatus}
+                            {incidentStatusLabel(upd.oldStatus)} ➔ {incidentStatusLabel(upd.newStatus)}
                           </div>
                           <p className="text-slate-700 text-xs bg-slate-50 p-2 rounded-lg border border-slate-100">
                             {upd.note}

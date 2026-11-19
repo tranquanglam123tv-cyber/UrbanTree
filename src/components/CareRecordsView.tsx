@@ -11,6 +11,7 @@ import {
   Filter,
 } from 'lucide-react';
 import { storage } from '../db/storage';
+import { anchorStatusLabel, careActionLabel, healthLabel } from '../services/apiMapper';
 import { CareActionType, CareRecord, TreeHealthStatus } from '../types';
 
 interface CareRecordsViewProps {
@@ -124,7 +125,7 @@ export const CareRecordsView: React.FC<CareRecordsViewProps> = ({
                     </span>
                     <span className="text-slate-300">·</span>
                     <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#174B36] text-white">
-                      {care.actionType}
+                      {careActionLabel(care.actionType)}
                     </span>
                     <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-100 text-emerald-800">
                       {Number(care.serviceCost || 0).toLocaleString('vi-VN')} VNĐ
@@ -143,16 +144,16 @@ export const CareRecordsView: React.FC<CareRecordsViewProps> = ({
                       <span>Thực hiện: <strong>{care.staffName || 'Đội kỹ thuật'}</strong></span>
                     </span>
                     <span>
-                      Chuyển biến sức khỏe: <strong className="text-slate-700">{care.healthBefore}</strong> ➔ <strong className="text-emerald-700">{care.healthAfter}</strong>
+                      Chuyển biến sức khỏe: <strong className="text-slate-700">{healthLabel(care.healthBefore)}</strong> ➔ <strong className="text-emerald-700">{healthLabel(care.healthAfter)}</strong>
                     </span>
                   </div>
                 </div>
 
                 {/* Blockchain Badge on Right */}
                 <div className="shrink-0 flex md:flex-col items-end justify-between md:justify-center gap-2 pt-2 md:pt-0 border-t md:border-t-0 border-slate-100">
-                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-800 font-mono text-[11px]">
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-800 text-[11px] font-semibold">
                     <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>CONFIRMED</span>
+                    <span>{anchorStatusLabel(care.anchorStatus)}</span>
                   </div>
                   {care.txHash && (
                     <span className="text-[10px] text-slate-400 font-mono truncate max-w-[130px]" title={care.txHash}>
