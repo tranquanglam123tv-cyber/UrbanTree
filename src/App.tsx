@@ -38,6 +38,15 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<string>(getInitialTab);
   const [currentUser, setCurrentUser] = useState<User>(storage.getActiveUser());
 
+  // Bảo đảm không bao giờ bị màn hình trắng khi tab không khớp vai trò đang chọn
+  useEffect(() => {
+    if (currentUser.role === 'CITIZEN' && activeTab !== 'incidents') {
+      setActiveTab('incidents');
+    } else if (currentUser.role === 'STAFF' && activeTab === 'blockchain') {
+      setActiveTab('dashboard');
+    }
+  }, [currentUser.role, activeTab]);
+
   // Modals state
   const [selectedTreeForDetail, setSelectedTreeForDetail] = useState<Tree | null>(null);
   const [selectedTreeForQr, setSelectedTreeForQr] = useState<Tree | null>(null);
@@ -194,7 +203,7 @@ export default function App() {
             UrbanTree © 2026 · Hệ thống Quản lý Cây xanh Đô thị tích hợp QR Code & Blockchain
           </div>
           <div className="flex items-center gap-3">
-            <span>HĐ EVM: <strong className="font-mono text-[#174B36]">0x71C8...12C8</strong></span>
+            <span>HĐ EVM (Sepolia): <strong className="font-mono text-[#174B36]">0x5E18...573C</strong></span>
             <span>·</span>
             <span>Chuẩn: <strong>SHA-256 Canonical v1</strong></span>
           </div>
