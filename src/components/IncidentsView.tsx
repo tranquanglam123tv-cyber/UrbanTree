@@ -42,17 +42,27 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
   const trees = storage.getTrees();
   const users = storage.getUsers();
 
-  // Admin filter & search
+  const isStaff = currentUser.role === 'STAFF';
+
+  // Admin / Staff filter & search
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
+  const [onlyMyAssigned, setOnlyMyAssigned] = useState<boolean>(false);
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
 
   // Status transition form state
-  const [newStatus, setNewStatus] = useState<IncidentStatus>('ASSIGNED');
+  const [newStatus, setNewStatus] = useState<IncidentStatus>(isStaff ? 'IN_PROGRESS' : 'ASSIGNED');
   const [assignStaffId, setAssignStaffId] = useState<string>('');
   const [transitionNote, setTransitionNote] = useState('');
   const [serviceCost, setServiceCost] = useState<string>('2500000');
   const [isUpdating, setIsUpdating] = useState(false);
+
+  React.useEffect(() => {
+    setNewStatus(currentUser.role === 'STAFF' ? 'IN_PROGRESS' : 'ASSIGNED');
+    if (currentUser.role !== 'STAFF') {
+      setOnlyMyAssigned(false);
+    }
+  }, [currentUser.role]);
 
   // Citizen submission form state
   const [reportTreeId, setReportTreeId] = useState<string>('');
@@ -84,14 +94,15 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
       (inc.address && inc.address.toLowerCase().includes(search.toLowerCase()));
 
     const matchesStatus = statusFilter === 'ALL' || inc.status === statusFilter;
-    return matchesSearch && matchesStatus;
+    const matchesAssigned = !onlyMyAssigned || inc.assignedToUserId === currentUser.id;
+    return matchesSearch && matchesStatus && matchesAssigned;
   });
 
   const handleUpdateStatus = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedIncident) return;
     if (!transitionNote.trim()) {
-      alert('Vui lòng nhập ghi chú lý do thay đổi trạng thái sự cố.');
+      alert('Vui lòng nhập ghi chú tình hình xử lý sự cố.');
       return;
     }
 
@@ -103,7 +114,9 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
         actorUserId: currentUser.id,
         actorName: `${currentUser.fullName} (${currentUser.role})`,
         note: transitionNote.trim(),
-        assignedToUserId: assignStaffId || undefined,
+        assignedToUserId: isStaff
+          ? selectedIncident.assignedToUserId || currentUser.id
+          : assignStaffId || undefined,
         ...(newStatus === 'RESOLVED'
           ? {
               serviceCost: Number(serviceCost || 0),
@@ -214,7 +227,7 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
                 activeSubTab === 'admin' ? 'bg-white text-[#174B36] shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              Điều phối Sự cố (Admin)
+              {isStaff ? 'Xử lý Hiện trường (Staff)' : 'Điều phối Sự cố (Admin)'}
             </button>
           )}
           <button
@@ -236,7 +249,7 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
         </div>
       </div>
 
-      {/* Subtab 1: Admin Management & Triage */}
+      {/* Subtab 1: Admin / Staff Management */}
       {activeSubTab === 'admin' && (
         <div className="space-y-4">
           {/* Filter and Search Bar */}
@@ -247,10 +260,24 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Tìm mã sự cố (INC-84920), mô tả, địa chỉ..."
+                placeholder="Tìm mã sự cố (INC-...), mô tả, địa chỉ..."
                 className="w-full pl-9 pr-3 py-1.5 text-xs border border-slate-200 rounded-lg focus:border-[#347A50] focus:ring-1 focus:ring-[#347A50]"
               />
             </div>
+
+            {isStaff && (
+              <button
+                type="button"
+                onClick={() => setOnlyMyAssigned(!onlyMyAssigned)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+                  onlyMyAssigned
+                    ? 'bg-[#174B36] text-white border-[#174B36]'
+                    : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                }`}
+              >
+                {onlyMyAssigned ? '✓ Đang lọc: Việc của tôi' : 'Chỉ xem việc giao cho tôi'}
+              </button>
+            )}
 
             <div className="flex items-center gap-2">
               <span className="text-xs text-slate-500">Trạng thái:</span>
@@ -421,42 +448,44 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
                   ) : (
                   <form onSubmit={handleUpdateStatus} className="pt-3 border-t border-slate-100 space-y-3">
                     <div className="font-bold text-[#174B36] text-[11px] uppercase tracking-wider">
-                      Cập nhật trạng thái sự cố
+                      {isStaff ? 'Cập nhật tình hình xử lý (Staff)' : 'Cập nhật trạng thái sự cố (Admin)'}
                     </div>
 
                     <div>
                       <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                        Chuyển sang trạng thái:
+                        {isStaff ? 'Tiến độ xử lý tại hiện trường:' : 'Chuyển sang trạng thái:'}
                       </label>
                       <select
                         value={newStatus}
                         onChange={(e) => setNewStatus(e.target.value as IncidentStatus)}
                         className="w-full px-2.5 py-1.5 border border-slate-200 rounded-lg bg-white font-medium"
                       >
-                        <option value="ASSIGNED">Phân công nhân viên (ASSIGNED)</option>
+                        {!isStaff && <option value="ASSIGNED">Phân công nhân viên (ASSIGNED)</option>}
                         <option value="IN_PROGRESS">Đang xử lý tại hiện trường (IN_PROGRESS)</option>
                         <option value="RESOLVED">Đã xử lý xong (RESOLVED - Neo Blockchain)</option>
-                        <option value="REJECTED">Từ chối / Tin báo sai (REJECTED)</option>
+                        {!isStaff && <option value="REJECTED">Từ chối / Tin báo sai (REJECTED)</option>}
                       </select>
                     </div>
 
-                    <div>
-                      <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                        Nhân viên phân công:
-                      </label>
-                      <select
-                        value={assignStaffId}
-                        onChange={(e) => setAssignStaffId(e.target.value)}
-                        className="w-full px-2.5 py-1.5 border border-slate-200 rounded-lg bg-white"
-                      >
-                        <option value="">-- Chưa chỉ định --</option>
-                        {users.filter((u) => u.role === 'STAFF').map((staff) => (
-                          <option key={staff.id} value={staff.id}>
-                            {staff.fullName} (STAFF)
-                          </option>
-                        ))}
-                      </select>
-                    </div>
+                    {!isStaff && (
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                          Nhân viên phân công:
+                        </label>
+                        <select
+                          value={assignStaffId}
+                          onChange={(e) => setAssignStaffId(e.target.value)}
+                          className="w-full px-2.5 py-1.5 border border-slate-200 rounded-lg bg-white"
+                        >
+                          <option value="">-- Chưa chỉ định --</option>
+                          {users.filter((u) => u.role === 'STAFF').map((staff) => (
+                            <option key={staff.id} value={staff.id}>
+                              {staff.fullName} (STAFF)
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
 
                     {newStatus === 'RESOLVED' && (
                       <div>
