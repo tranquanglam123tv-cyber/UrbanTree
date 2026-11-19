@@ -174,6 +174,15 @@ exports.updateIncidentStatus = (req, res) => {
       return res.status(404).json({ success: false, message: `Không tìm thấy sự cố với ID: ${id}` });
     }
 
+    const lockedStatuses = ['Đã hoàn thành', 'Đã giải quyết', 'Từ chối'];
+    if (lockedStatuses.includes(existing.status)) {
+      return res.status(409).json({
+        success: false,
+        locked: true,
+        message: `CHỐT HỒ SƠ: Sự cố này đã ở trạng thái "${existing.status}" và đã được chốt bất biến, không thể cập nhật lại!`
+      });
+    }
+
     const finalNotes = resolution_notes !== undefined ? resolution_notes : (note || existing.resolution_notes || '');
     const finalCost = service_cost !== undefined ? Number(service_cost) : Number(existing.service_cost || 0);
 

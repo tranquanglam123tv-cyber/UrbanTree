@@ -114,6 +114,8 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
 
       setSelectedIncident(updated);
       setTransitionNote('');
+    } catch (err: any) {
+      alert(err?.message || 'Không thể cập nhật trạng thái sự cố.');
     } finally {
       setIsUpdating(false);
     }
@@ -391,7 +393,32 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
                     )}
                   </div>
 
-                  {/* Status Transition Form */}
+                  {/* Status Transition Form (Khóa cứng sau khi đã chốt/niêm phong) */}
+                  {selectedIncident.status === 'RESOLVED' ||
+                  selectedIncident.status === 'REJECTED' ||
+                  selectedIncident.anchorStatus === 'CONFIRMED' ? (
+                    <div className="pt-3 border-t border-slate-100">
+                      <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 space-y-1.5 text-[11px]">
+                        <div className="font-bold text-emerald-900 flex items-center gap-1.5">
+                          <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+                          <span>Hồ sơ đã chốt ({selectedIncident.status}) — Không thể cập nhật lại</span>
+                        </div>
+                        <p className="text-emerald-800 leading-relaxed">
+                          Biên bản sự cố này đã hoàn tất quy trình và khóa bất biến để bảo chứng toàn vẹn với Sepolia Blockchain.
+                        </p>
+                        {selectedIncident.txHash && (
+                          <a
+                            href={`https://sepolia.etherscan.io/tx/${selectedIncident.txHash}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-block font-mono text-[10px] text-blue-700 hover:underline break-all"
+                          >
+                            Sepolia Tx: {selectedIncident.txHash}
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
                   <form onSubmit={handleUpdateStatus} className="pt-3 border-t border-slate-100 space-y-3">
                     <div className="font-bold text-[#174B36] text-[11px] uppercase tracking-wider">
                       Cập nhật trạng thái sự cố
@@ -468,6 +495,7 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
                       {isUpdating ? 'Đang lưu & băm lịch sử...' : 'Lưu cập nhật trạng thái'}
                     </button>
                   </form>
+                  )}
 
                   {/* Immutable Timeline History */}
                   <div className="pt-3 border-t border-slate-100 space-y-2">
